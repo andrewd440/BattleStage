@@ -36,19 +36,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	virtual void OnUnequip();
 
-	/** Sets the pressure on the weapon's trigger [0.0-1.0] */
-	UFUNCTION(BlueprintCallable, Category = Weapon)
-	void SetTriggerPressure(const float PressureScale) { TriggerPressure = PressureScale; }
-
-	/** Gets the pressure on the weapon's trigger [0.0-1.0] */
-	UFUNCTION(BlueprintCallable, Category = Weapon)
-	float GetTriggerPressure() const { return TriggerPressure; };
-
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	virtual void BeginFireSequence();
 
 	UFUNCTION(BlueprintCallable, Category = Weapon)
-	virtual bool CanFire() { return false; }
+	virtual bool CanFire() const { return false; }
 
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	virtual void Fire();
@@ -73,7 +65,7 @@ protected:
 
 protected:
 	// The character that has this weapon equipped. 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = Weapon)
 	class ABSCharacter* CharacterOwner; //#bstodo May not need. Could use Owner.
 
 	// Mesh for the weapon
@@ -128,29 +120,29 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Weapon)
 	UAnimMontage* FireAnim;
 
-private:
-		
+protected:	
 	/**
 	* Spawns the weapon projectile. ProjectileClass must be non-null.
 	*/
-	void SpawnProjectile();
+	virtual void SpawnProjectile();
 
 	/**
 	* Plays the fire effects for the weapon. Only plays effect for the
 	* weapon, not projectile.
 	*/
-	void PlayFireEffects();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerFire();
-	void ServerFire_Implementation();
-	bool ServerFire_Validate();
+	virtual void PlayFireEffects();
 
 private:
-	// Pressure scale on the weapon trigger [0.0-1.0]
-	UPROPERTY(VisibleAnywhere, Category = Weapon)
-	float TriggerPressure;
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerFire();
 
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerBeginFireSequence();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerEndFireSequence();
+
+private:
 	// Toggle flag that indicates that the server fired a shot when changed.
 	UPROPERTY(ReplicatedUsing=OnRep_ServerFired)
 	uint32 bServerFired:1;

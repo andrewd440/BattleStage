@@ -37,6 +37,7 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	/** APawn interface */
+	virtual void PossessedBy(AController* NewController) override;
 	virtual void Tick(float DeltaSeconds) override;
 	/** APawn interface end */
 
@@ -46,8 +47,6 @@ public:
 private:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerEquipWeapon();
-	void ServerEquipWeapon_Implementation();
-	bool ServerEquipWeapon_Validate();
 
 public:
 	/** Returns FirstPersonCamera subobject **/

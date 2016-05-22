@@ -19,7 +19,7 @@ public:
 	ABSPlayerController();
 
 	UFUNCTION(Client, Unreliable)
-	void ClientHearSound(USoundBase* Sound, AActor* SourceActor, const FVector_NetQuantize SoundLocation) const;
+	virtual void ClientHearSound(USoundBase* Sound, AActor* SourceActor, const FVector_NetQuantize SoundLocation) const;
 
 	/** Handles moving forward/backward */
 	void OnMoveForward(float Val);

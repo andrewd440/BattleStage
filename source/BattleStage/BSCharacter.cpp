@@ -53,6 +53,12 @@ void ABSCharacter::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 }
 
+void ABSCharacter::PossessedBy(AController* NewController)
+{
+	SetOwner(NewController);
+	Super::PossessedBy(NewController);
+}
+
 void ABSCharacter::EquipWeapon()
 {
 	if (!HasAuthority())

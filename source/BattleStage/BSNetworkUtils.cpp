@@ -24,7 +24,12 @@ void UBSNetworkUtils::PlaySound(USoundBase* Sound, AActor* SourceActor, const FV
 
 		const UNetDriver* const NetDriver = World->GetNetDriver();
 		const ENetMode NetMode = World->GetNetMode();
-		const ABSPlayerController* const SourceOwner = Cast<ABSPlayerController>(SourceActor->GetNetOwner());
+		const ABSPlayerController* SourceOwner = nullptr;
+		
+		for (const AActor* TestOwner = SourceActor; TestOwner && !SourceOwner; TestOwner = TestOwner->GetOwner())
+		{
+			SourceOwner = Cast<ABSPlayerController>(TestOwner);
+		}
 
 		if (NetMode != NM_Client && NetMode != NM_Standalone && ReplicationOption != EReplicationOption::LocalOnly)
 		{

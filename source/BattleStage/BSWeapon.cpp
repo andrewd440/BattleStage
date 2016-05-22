@@ -32,6 +32,7 @@ void ABSWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME_CONDITION(ABSWeapon, bServerFired, COND_SkipOwner);
+	DOREPLIFETIME(ABSWeapon, CharacterOwner);//, COND_SkipOwner);
 }
 
 // Called when the game starts or when spawned
@@ -62,15 +63,6 @@ void ABSWeapon::OnUnequip()
 	CharacterOwner = nullptr;
 }
 
-void ABSWeapon::BeginFireSequence()
-{
-	if (BeginFireSequenceSound)
-	{
-		UGameplayStatics::PlaySoundAttached(BeginFireSequenceSound, RootComponent);
-		//UBSNetworkUtils::PlaySound(BeginFireSequenceSound, this, FVector::ZeroVector, EReplicationOption::AllButOWner);
-	}
-}
-
 void ABSWeapon::Fire()
 {
 	if (MuzzleEffect || ProjectileClass)
@@ -82,21 +74,47 @@ void ABSWeapon::Fire()
 		}
 		else
 		{
-			ServerFire_Implementation();
+			if (ProjectileClass)
+				SpawnProjectile();
+
+			PlayFireEffects();
+			bServerFired = !bServerFired;
 		}
 	}
 }
 
 void ABSWeapon::ServerFire_Implementation()
 {
-	if (ProjectileClass)
-		SpawnProjectile();
-
-	PlayFireEffects();
-	bServerFired = !bServerFired;
+	Fire();
 }
 
 bool ABSWeapon::ServerFire_Validate()
+{
+	return true;
+}
+
+void ABSWeapon::BeginFireSequence()
+{
+	if (BeginFireSequenceSound)
+	{
+		if (!HasAuthority())
+		{
+			UGameplayStatics::SpawnSoundAttached(BeginFireSequenceSound, RootComponent);
+			ServerBeginFireSequence();
+		}
+		else
+		{
+			UBSNetworkUtils::PlaySound(BeginFireSequenceSound, this, FVector::ZeroVector, EReplicationOption::AllButOWner);
+		}
+	}
+}
+
+void ABSWeapon::ServerBeginFireSequence_Implementation()
+{
+	BeginFireSequence();
+}
+
+bool ABSWeapon::ServerBeginFireSequence_Validate()
 {
 	return true;
 }
@@ -116,7 +134,7 @@ void ABSWeapon::PlayFireEffects()
 		MuzzleEffect->Activate(true);
 
 	if(FireSound)
-		UGameplayStatics::PlaySoundAttached(FireSound, RootComponent);
+		UGameplayStatics::SpawnSoundAttached(FireSound, RootComponent);
 }
 
 void ABSWeapon::OnRep_ServerFired()
@@ -128,8 +146,26 @@ void ABSWeapon::EndFireSequence()
 {
 	if (EndFireSequenceSound)
 	{
-
+		if (!HasAuthority())
+		{
+			UGameplayStatics::SpawnSoundAttached(EndFireSequenceSound, RootComponent);
+			ServerEndFireSequence();
+		}
+		else
+		{
+			UBSNetworkUtils::PlaySound(EndFireSequenceSound, this, FVector::ZeroVector, EReplicationOption::AllButOWner);
+		}
 	}
+}
+
+void ABSWeapon::ServerEndFireSequence_Implementation()
+{
+	EndFireSequence();
+}
+
+bool ABSWeapon::ServerEndFireSequence_Validate()
+{
+	return true;
 }
 
 FRotator ABSWeapon::GetFireRotation_Implementation() const
