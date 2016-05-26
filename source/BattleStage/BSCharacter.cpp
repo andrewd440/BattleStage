@@ -45,12 +45,28 @@ void ABSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ABSCharacter, EquippedWeapon);
+	DOREPLIFETIME(ABSCharacter, Weapon);
+}
+
+void ABSCharacter::Fire() const
+{
+	if (Weapon)
+	{
+		Weapon->Fire();
+	}
 }
 
 void ABSCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+}
+
+void ABSCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if(HasAuthority())
+		EquipWeapon();
 }
 
 void ABSCharacter::PossessedBy(AController* NewController)
@@ -61,27 +77,26 @@ void ABSCharacter::PossessedBy(AController* NewController)
 
 void ABSCharacter::EquipWeapon()
 {
-	if (!HasAuthority())
+	if (WeaponClass)
 	{
-		if (AvailableWeapons.Num() > 0)
+		if (!HasAuthority())
+		{
 			ServerEquipWeapon();
-	}
-	else
-	{
-		ServerEquipWeapon_Implementation();
+		}
+		else
+		{
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.Instigator = this;
+			SpawnParams.Owner = this;
+			Weapon = GetWorld()->SpawnActor<ABSWeapon>(WeaponClass, SpawnParams);
+			Weapon->OnEquip(this);
+		}
 	}
 }
 
 void ABSCharacter::ServerEquipWeapon_Implementation()
 {
-	if (AvailableWeapons.Num() > 0)
-	{
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.Instigator = this;
-		SpawnParams.Owner = this;
-		EquippedWeapon = GetWorld()->SpawnActor<ABSWeapon>(AvailableWeapons[0], SpawnParams);
-		EquippedWeapon->OnEquip(this);
-	}
+	EquipWeapon();
 }
 
 bool ABSCharacter::ServerEquipWeapon_Validate()

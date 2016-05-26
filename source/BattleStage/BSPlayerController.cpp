@@ -20,22 +20,16 @@ void ABSPlayerController::SetPawn(APawn* InPawn)
 	BSCharacter = Cast<ABSCharacter>(InPawn);
 }
 
-void ABSPlayerController::BeginPlay()
-{
-	
-}
-
 void ABSPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 
 	check(InputComponent);
-
-	InputComponent->BindAction("Equip", IE_Pressed, this, &ABSPlayerController::OnEquip);
-	InputComponent->BindAction("Fire", IE_Pressed, this, &ABSPlayerController::OnFireRight);
 	
 	InputComponent->BindAxis("MoveForward", this, &ABSPlayerController::OnMoveForward);
 	InputComponent->BindAxis("MoveRight", this, &ABSPlayerController::OnMoveRight);
+
+	InputComponent->BindAction("Jump", IE_Pressed, this, &ABSPlayerController::OnJump);
 
 	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
 	// "turn" handles devices that provide an absolute delta, such as a mouse.
@@ -45,6 +39,8 @@ void ABSPlayerController::SetupInputComponent()
 
 	InputComponent->BindAxis("LookUp", this, &ABSPlayerController::AddPitchInput);
 	InputComponent->BindAxis("LookUpRate", this, &ABSPlayerController::OnLookUpRate);
+
+	InputComponent->BindAction("Fire", IE_Pressed, this, &ABSPlayerController::OnFire);
 }
 
 void ABSPlayerController::ClientHearSound_Implementation(USoundBase* Sound, AActor* SourceActor, FVector_NetQuantize SoundLocation) const
@@ -84,6 +80,15 @@ void ABSPlayerController::OnMoveRight(float Value)
 	}
 }
 
+void ABSPlayerController::OnJump()
+{
+	ACharacter* Character = GetCharacter();
+	if (Character)
+	{
+		Character->Jump();
+	}
+}
+
 void ABSPlayerController::OnTurnAtRate(float Rate)
 {
 	AddYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
@@ -94,18 +99,10 @@ void ABSPlayerController::OnLookUpRate(float Rate)
 	AddPitchInput(Rate * BaseLookRate * GetWorld()->GetDeltaSeconds());
 }
 
-void ABSPlayerController::OnEquip()
+void ABSPlayerController::OnFire()
 {
 	if (BSCharacter)
 	{
-		BSCharacter->EquipWeapon();
-	}
-}
-
-void ABSPlayerController::OnFireRight()
-{
-	if (BSCharacter && BSCharacter->EquippedWeapon)
-	{
-		BSCharacter->EquippedWeapon->Fire();
+		BSCharacter->Fire();
 	}
 }

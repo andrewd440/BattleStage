@@ -40,7 +40,7 @@ public:
 	virtual void BeginFireSequence();
 
 	UFUNCTION(BlueprintCallable, Category = Weapon)
-	virtual bool CanFire() const { return false; }
+	virtual bool CanFire() const { return true; }
 
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	virtual void Fire();
@@ -110,15 +110,15 @@ protected:
 	
 	// Played when the weapon is equipped
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Weapon)
-	UAnimMontage* EquipAnim;
+	UAnimMontage* EquipAnim = nullptr;
 
 	// Played when the weapon is unequipped
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Weapon)
-	UAnimMontage* UnequipAnim;
+	UAnimMontage* UnequipAnim = nullptr;
 
 	// Played when the weapon is fired
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Weapon)
-	UAnimMontage* FireAnim;
+	UAnimMontage* FireAnim = nullptr;
 
 protected:	
 	/**

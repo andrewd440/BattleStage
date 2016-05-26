@@ -21,11 +21,15 @@ public:
 	UFUNCTION(Client, Unreliable)
 	virtual void ClientHearSound(USoundBase* Sound, AActor* SourceActor, const FVector_NetQuantize SoundLocation) const;
 
+protected:
 	/** Handles moving forward/backward */
 	void OnMoveForward(float Val);
 
 	/** Handles stafing movement, left and right */
 	void OnMoveRight(float Val);
+
+	/** Handles jump input */
+	void OnJump();
 
 	/**
 	* Called via input to turn at a given rate.
@@ -39,12 +43,8 @@ public:
 	*/
 	void OnLookUpRate(float Rate);
 
-	void OnEquip();
-
-	void OnFireRight();
-
-protected:
-	virtual void ClientHearSound_Implementation(USoundBase* Sound, AActor* SourceActor, const FVector_NetQuantize SoundLocation) const;
+	/** Handles fire input */
+	void OnFire();
 
 protected:
 	/* The base turn rate of the player **/
@@ -63,7 +63,6 @@ private:
 	//-----------------------------------------------------------------
 public:
 	virtual void SetPawn(APawn* InPawn) override;
-	virtual void BeginPlay() override;
 protected:
 	virtual void SetupInputComponent() override;
 	//-----------------------------------------------------------------

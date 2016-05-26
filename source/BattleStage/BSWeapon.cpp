@@ -65,7 +65,7 @@ void ABSWeapon::OnUnequip()
 
 void ABSWeapon::Fire()
 {
-	if (MuzzleEffect || ProjectileClass)
+	if (CanFire() && (MuzzleEffect || ProjectileClass))
 	{
 		if (!HasAuthority())
 		{

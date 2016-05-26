@@ -4,6 +4,7 @@
 #include "BSCharacter.generated.h"
 
 class UInputComponent;
+class ABSWeapon;
 
 UCLASS(config=Game)
 class ABSCharacter : public ACharacter
@@ -22,29 +23,34 @@ class ABSCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
 	class USkeletalMeshComponent* CharacterMesh;
 
-protected:
-	/** All weapon classes that are available to the character */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Weapon)
-	TArray<TSubclassOf<class ABSWeapon>> AvailableWeapons;
-
-public:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = Weapon)
-	class ABSWeapon* EquippedWeapon;
-
 public:
 	ABSCharacter();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	virtual void Fire() const;
 
 	/** APawn interface */
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void Tick(float DeltaSeconds) override;
 	/** APawn interface end */
 
+	/** AActor interface */
+	virtual void BeginPlay() override;
+	/** AActor interface end */
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Weapon)
+	TSubclassOf<ABSWeapon> WeaponClass;
+
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = Weapon)
+	ABSWeapon* Weapon = nullptr;
+
+private:
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	void EquipWeapon();
 
-private:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerEquipWeapon();
 

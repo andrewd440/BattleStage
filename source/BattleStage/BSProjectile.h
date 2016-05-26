@@ -21,12 +21,23 @@ public:
 
 	/** called when projectile hits something */
 	UFUNCTION()
-	void OnHit(AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
 	/** Returns CollisionComp subobject **/
 	FORCEINLINE class USphereComponent* GetCollisionComp() const { return CollisionComp; }
 
 	/** Returns ProjectileMovement subobject **/
 	FORCEINLINE class UProjectileMovementComponent* GetProjectileMovement() const { return ProjectileMovement; }
+
+protected:
+	// Effect generated at the surface of impact by the projectile
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Effects)
+	TSubclassOf<class ABSImpactEffect> ImpactEffect;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Damage)
+	FRadialDamageParams Damage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Damage)
+	TSubclassOf<class UDamageType> DamageTypeClass;
 };
 
