@@ -28,24 +28,29 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	virtual void Fire() const;
+	virtual void StartFire();
+	virtual void StopFire();
 
-	/** APawn interface */
+	/** ACharacter interface */\
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void Tick(float DeltaSeconds) override;
-	/** APawn interface end */
+	virtual void PostInitializeComponents() override;
+	/** ACharacter interface end */
 
 	/** AActor interface */
 	virtual void BeginPlay() override;
-	/** AActor interface end */
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Weapon)
-	TSubclassOf<ABSWeapon> WeaponClass;
+	/** AActor interface end*/
 
 protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Weapon)
+	TSubclassOf<ABSWeapon> DefaultWeaponClass = nullptr;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = Weapon)
 	ABSWeapon* Weapon = nullptr;
+
+	// Socket name to attach equipped weapons
+	UPROPERTY(EditDefaultsOnly, Category = Weapon)
+	FName WeaponEquippedSocket;
 
 private:
 	UFUNCTION(BlueprintCallable, Category = Weapon)
@@ -63,5 +68,8 @@ public:
 
 	/** Returns CharacterMesh subobject **/
 	FORCEINLINE class USkeletalMeshComponent* GetCharacterMesh() const { return CharacterMesh; }
+
+	/** Gets the name of the socket to attach equipped weapons. */
+	FORCEINLINE FName GetWeaponEquippedSocket() const { return WeaponEquippedSocket; }
 };
 

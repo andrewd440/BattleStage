@@ -6,25 +6,31 @@
 #include "UnrealNetwork.h"
 #include "BSNetworkUtils.h"
 
-FName ABSWeapon::FireEffectName(TEXT("FireEffect"));
-
-// Sets default values
 ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
-	, CharacterOwner(nullptr)
-	, FireOffset(EForceInit::ForceInitToZero)
-	, SocketOffset(EForceInit::ForceInitToZero)
+	, MuzzleSocket(TEXT("MuzzleAttach"))
 {
-	//PrimaryActorTick.bCanEverTick = true;
-	bReplicates = true;
-
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
 	Mesh->bDisableClothSimulation = true;
 	Mesh->SetCollisionProfileName("CharacterMesh");
 	RootComponent = Mesh;
 
-	MuzzleEffect = CreateOptionalDefaultSubobject<UParticleSystemComponent>(FireEffectName);
-	MuzzleEffect->SetupAttachment(Mesh);
+	bReplicates = true;
+
+	// Default weapon fire data
+	WeaponFireData.MaxAmmo = 120;
+	WeaponFireData.ClipSize = 30;
+	WeaponFireData.FireRate = 0.1f;
+	WeaponFireData.ReloadSpeed = 2.0f;
+	WeaponFireData.bIsAuto = true;
+}
+
+void ABSWeapon::PostInitProperties()
+{
+	Super::PostInitProperties();
+
+	RemainingAmmo = WeaponFireData.MaxAmmo;
+	RemainingClip = WeaponFireData.ClipSize;
 }
 
 void ABSWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -32,7 +38,10 @@ void ABSWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME_CONDITION(ABSWeapon, bServerFired, COND_SkipOwner);
-	DOREPLIFETIME(ABSWeapon, CharacterOwner);//, COND_SkipOwner);
+	DOREPLIFETIME(ABSWeapon, BSCharacter);
+	DOREPLIFETIME(ABSWeapon, WeaponState); // Remotes need to play animations, etc.
+	DOREPLIFETIME_CONDITION(ABSWeapon, RemainingAmmo, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(ABSWeapon, RemainingClip, COND_OwnerOnly);
 }
 
 // Called when the game starts or when spawned
@@ -47,94 +56,287 @@ void ABSWeapon::Tick( float DeltaTime )
 	Super::Tick( DeltaTime );
 }
 
-void ABSWeapon::OnEquip(ABSCharacter* Character)
+void ABSWeapon::ServerEquip_Implementation(ABSCharacter* Character)
 {
-	FAttachmentTransformRules AttachRules{ EAttachmentRule::KeepRelative, true };
-	AttachToComponent(Character->GetFirstPersonMesh(), AttachRules, FName{TEXT("GripPoint")});
-	SetActorRelativeLocation(SocketOffset);
+	BSCharacter = Character;
 
-	CharacterOwner = Character;
+	FAttachmentTransformRules AttachRules{ EAttachmentRule::SnapToTarget, true };
+	AttachToComponent(Character->GetFirstPersonMesh(), AttachRules, Character->GetWeaponEquippedSocket());
+
+	SetWeaponState(EWeaponState::Equipping);
 }
 
-void ABSWeapon::OnUnequip()
-{
-	DetachRootComponentFromParent();
-
-	CharacterOwner = nullptr;
-}
-
-void ABSWeapon::Fire()
-{
-	if (CanFire() && (MuzzleEffect || ProjectileClass))
-	{
-		if (!HasAuthority())
-		{
-			ServerFire();
-			PlayFireEffects();
-		}
-		else
-		{
-			if (ProjectileClass)
-				SpawnProjectile();
-
-			PlayFireEffects();
-			bServerFired = !bServerFired;
-		}
-	}
-}
-
-void ABSWeapon::ServerFire_Implementation()
-{
-	Fire();
-}
-
-bool ABSWeapon::ServerFire_Validate()
+bool ABSWeapon::ServerEquip_Validate(ABSCharacter* Character)
 {
 	return true;
 }
 
-void ABSWeapon::BeginFireSequence()
+void ABSWeapon::Unequip()
 {
-	if (BeginFireSequenceSound)
-	{
-		if (!HasAuthority())
-		{
-			UGameplayStatics::SpawnSoundAttached(BeginFireSequenceSound, RootComponent);
-			ServerBeginFireSequence();
-		}
-		else
-		{
-			UBSNetworkUtils::PlaySound(BeginFireSequenceSound, this, FVector::ZeroVector, EReplicationOption::AllButOWner);
-		}
-	}
+	SetWeaponState(EWeaponState::Unequipping);
 }
 
-void ABSWeapon::ServerBeginFireSequence_Implementation()
+void ABSWeapon::StartFire()
 {
-	BeginFireSequence();
+	SetWeaponState(EWeaponState::Firing);
 }
 
-bool ABSWeapon::ServerBeginFireSequence_Validate()
+void ABSWeapon::StopFire()
 {
-	return true;
+	if(WeaponState != EWeaponState::Reloading)
+		SetWeaponState(EWeaponState::Active);
 }
 
-void ABSWeapon::SpawnProjectile()
+void ABSWeapon::SpawnProjectile(const FVector& Position, const FVector_NetQuantizeNormal& Direction)
 {
-	check(CharacterOwner);
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = BSCharacter;
 
-	const FRotator ProjRotation = GetFireRotation();
-	const FVector ProjLocation = GetFireLocation() + ProjRotation.RotateVector(FireOffset);
-	GetWorld()->SpawnActor<ABSProjectile>(ProjectileClass, ProjLocation, ProjRotation);
+	GetWorld()->SpawnActor<ABSProjectile>(ProjectileClass, Position, Direction.Rotation(), SpawnParams);
 }
 
 void ABSWeapon::PlayFireEffects()
 {
-	if (MuzzleEffect)
-		MuzzleEffect->Activate(true);
+	if (MuzzleFX)
+	{
+		if (MuzzleFXComponent)
+		{
+			MuzzleFXComponent->DeactivateSystem();
+			MuzzleFXComponent->DestroyComponent();
+		}
+
+		MuzzleFXComponent = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, Mesh, MuzzleSocket);	
+	}
 
 	if(FireSound)
-		UGameplayStatics::SpawnSoundAttached(FireSound, RootComponent);
+		UGameplayStatics::SpawnSoundAttached(FireSound, Mesh, MuzzleSocket);
+}
+
+void ABSWeapon::SetWeaponState(EWeaponState State)
+{
+	if (WeaponState != State)
+	{
+		switch (State)
+		{
+		case EWeaponState::Firing:
+			if (CanFire() && RemainingClip <= 0)
+				State = EWeaponState::Reloading;
+			break;
+		case EWeaponState::Reloading:
+			if (RemainingAmmo <= 0)
+				State = EWeaponState::Active;
+			break;
+		case EWeaponState::Inactive:
+			check(WeaponState == EWeaponState::Unequipping && "ABSWeapon setting to inactive before unequipping.");
+			break;
+		case EWeaponState::Equipping:
+			check(WeaponState == EWeaponState::Inactive && "ABSWeapon setting to equipping while not inactive.");
+			break;
+		}
+
+		if(WeaponState != State)
+			HandleNewWeaponState(State);
+	}
+}
+
+void ABSWeapon::HandleNewWeaponState(const EWeaponState State)
+{
+	if (!HasAuthority())
+	{
+		ServerHandleNewWeaponState(State);
+	}
+	else
+	{
+		if (WeaponState == EWeaponState::Firing)
+			ClientExitFiringState();
+
+		WeaponState = State;
+
+		FTimerManager& TimerManager = GetWorldTimerManager();
+		TimerManager.ClearTimer(WeaponStateTimer);
+
+		switch(State)
+		{
+		case EWeaponState::Equipping:
+			{
+				const float SequenceLength = PlayEquipSequence();
+				if (SequenceLength > 0)
+				{
+					TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnEquipFinished, SequenceLength);
+				}
+				else if (SequenceLength == 0)
+				{
+					OnEquipFinished();
+				}
+				break;
+			}
+		case EWeaponState::Unequipping:
+			{
+				const float SequenceLength = PlayUnequipSequence();
+				if (SequenceLength > 0)
+				{
+					TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnUnquipFinished, SequenceLength);
+				}
+				else if (SequenceLength == 0)
+				{
+					OnUnquipFinished();
+				}
+				break;
+			}
+		case EWeaponState::Reloading:			
+			{
+				const float SequenceLength = PlayReloadSequence();
+				if (SequenceLength > 0)
+				{
+					TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnReloadFinished, SequenceLength);
+				}
+				else if (SequenceLength == 0)
+				{
+					OnReloadFinished();
+				}
+				break;
+			}
+		case EWeaponState::Firing:
+			{
+				ClientEnteredFiringState();
+				break;				
+			}
+		}
+		
+		if (GetNetMode() != NM_DedicatedServer)
+			OnRep_WeaponState();
+	}
+}
+
+void ABSWeapon::ServerHandleNewWeaponState_Implementation(const EWeaponState State)
+{
+	HandleNewWeaponState(State);
+}
+
+bool ABSWeapon::ServerHandleNewWeaponState_Validate(const EWeaponState State)
+{
+	bool bIsValid = true;
+
+	switch (State)
+	{
+	case EWeaponState::Firing:
+		bIsValid = CanFire() && RemainingClip > 0;
+		break;
+	case EWeaponState::Reloading:
+		bIsValid = RemainingAmmo > 0;
+		break;
+	}
+
+	return bIsValid;
+}
+
+void ABSWeapon::ClientEnteredFiringState_Implementation()
+{
+	GetWorldTimerManager().SetTimer(WeaponFiringTimer, this, &ABSWeapon::FireShot, WeaponFireData.FireRate, WeaponFireData.bIsAuto, 0.f);
+}
+
+void ABSWeapon::ClientExitFiringState_Implementation()
+{
+	GetWorldTimerManager().ClearTimer(WeaponFiringTimer);
+}
+
+void ABSWeapon::FireShot()
+{
+	if (RemainingClip > 0)
+	{
+		ServerFire(GetFireLocation(), GetFireRotation().Vector());
+	}
+	else if (RemainingAmmo > 0)
+	{
+		SetWeaponState(EWeaponState::Reloading);
+	}
+	else
+	{
+		SetWeaponState(EWeaponState::Active);
+	}
+}
+
+void ABSWeapon::ServerFire_Implementation(FVector Position, FVector_NetQuantizeNormal Direction)
+{
+	if (RemainingClip > 0)
+	{
+		RemainingClip--;
+
+		if (ProjectileClass)
+			SpawnProjectile(Position, Direction);
+
+		bServerFired = !bServerFired;
+
+		if (GetNetMode() != NM_DedicatedServer)
+			OnRep_ServerFired();
+	}
+	else if (RemainingAmmo > 0)
+	{
+		SetWeaponState(EWeaponState::Reloading);
+	}
+	else
+	{
+		SetWeaponState(EWeaponState::Active);
+	}
+}
+
+bool ABSWeapon::ServerFire_Validate(FVector Position, FVector_NetQuantizeNormal Direction)
+{
+	return true;
+}
+
+void ABSWeapon::PlayBeginFireSequence()
+{
+	if (BeginFireSound)
+	{
+		UGameplayStatics::SpawnSoundAttached(BeginFireSound, RootComponent);
+	}
+}
+
+void ABSWeapon::PlayEndFireSequence()
+{
+	if (MuzzleFXComponent)
+	{
+		MuzzleFXComponent->DeactivateSystem();
+	}
+
+	if (EndFireSound)
+	{
+		UGameplayStatics::SpawnSoundAttached(EndFireSound, RootComponent);
+	}
+}
+
+void ABSWeapon::OnEquipFinished()
+{
+	SetWeaponState(EWeaponState::Active);
+}
+
+void ABSWeapon::OnReloadFinished()
+{
+	const int32 EmptySlots = WeaponFireData.ClipSize - RemainingClip;
+	const int32 RefillCount = FMath::Min(RemainingAmmo, EmptySlots);
+	RemainingClip += RefillCount;
+	RemainingAmmo -= RefillCount;
+	SetWeaponState(EWeaponState::Active);
+}
+
+void ABSWeapon::OnUnquipFinished()
+{
+	SetWeaponState(EWeaponState::Inactive);
+	DetachRootComponentFromParent();
+
+	BSCharacter = nullptr;
+}
+
+bool ABSWeapon::CanFire() const
+{
+	if (WeaponState == EWeaponState::Firing || WeaponState == EWeaponState::Active)
+	{
+		return RemainingAmmo > 0;
+	}
+
+	return false;
 }
 
 void ABSWeapon::OnRep_ServerFired()
@@ -142,39 +344,71 @@ void ABSWeapon::OnRep_ServerFired()
 	PlayFireEffects();
 }
 
-void ABSWeapon::EndFireSequence()
+void ABSWeapon::OnRep_WeaponState()
 {
-	if (EndFireSequenceSound)
+	if (PrevWeaponState == EWeaponState::Firing)
+		PlayEndFireSequence();
+
+	switch (WeaponState)
 	{
-		if (!HasAuthority())
-		{
-			UGameplayStatics::SpawnSoundAttached(EndFireSequenceSound, RootComponent);
-			ServerEndFireSequence();
-		}
-		else
-		{
-			UBSNetworkUtils::PlaySound(EndFireSequenceSound, this, FVector::ZeroVector, EReplicationOption::AllButOWner);
-		}
+	case EWeaponState::Equipping:
+		PlayEquipSequence();
+		break;
+	case EWeaponState::Unequipping:
+		PlayUnequipSequence();
+		break;
+	case EWeaponState::Reloading:
+		PlayReloadSequence();
+		break;
+	case EWeaponState::Firing:
+		PlayBeginFireSequence();
+		break;
 	}
-}
 
-void ABSWeapon::ServerEndFireSequence_Implementation()
-{
-	EndFireSequence();
-}
-
-bool ABSWeapon::ServerEndFireSequence_Validate()
-{
-	return true;
+	PrevWeaponState = WeaponState;
 }
 
 FRotator ABSWeapon::GetFireRotation_Implementation() const
 {
-	check(CharacterOwner);
-	return CharacterOwner->GetViewRotation();
+	return BSCharacter->GetViewRotation();
 }
 
 FVector ABSWeapon::GetFireLocation_Implementation() const
 {
-	return GetActorLocation();
+	return Mesh->GetSocketLocation(MuzzleSocket);
+}
+
+float ABSWeapon::PlayEquipSequence()
+{
+	float SequenceLength = 0.f;
+
+	if (EquipAnim)
+	{
+		SequenceLength = BSCharacter->PlayAnimMontage(EquipAnim);
+	}
+
+	return SequenceLength;
+}
+
+float ABSWeapon::PlayUnequipSequence()
+{
+	float SequenceLength = 0.f;
+
+	if (UnequipAnim)
+	{
+		SequenceLength = BSCharacter->PlayAnimMontage(UnequipAnim);
+	}
+
+	return SequenceLength;
+}
+
+float ABSWeapon::PlayReloadSequence()
+{
+	if (ReloadAnim)
+	{
+		const float AnimLengthScale = ReloadAnim->CalculateSequenceLength() / WeaponFireData.ReloadSpeed;
+		const float AnimLength = BSCharacter->PlayAnimMontage(ReloadAnim, AnimLengthScale);
+	}
+
+	return WeaponFireData.ReloadSpeed;
 }

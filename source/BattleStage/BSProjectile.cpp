@@ -3,6 +3,7 @@
 #include "BattleStage.h"
 #include "BSProjectile.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "BSImpactEffect.h"
 
 ABSProjectile::ABSProjectile() 
 {
@@ -13,7 +14,6 @@ ABSProjectile::ABSProjectile()
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
 	CollisionComp->InitSphereRadius(5.0f);
 	CollisionComp->BodyInstance.SetCollisionProfileName("Projectile");
-	CollisionComp->OnComponentHit.AddDynamic(this, &ABSProjectile::OnHit);		// set up a notification for when this component hits something blocking
 
 	// Players can't walk on it
 	CollisionComp->SetWalkableSlopeOverride(FWalkableSlopeOverride(WalkableSlope_Unwalkable, 0.f));
@@ -27,19 +27,33 @@ ABSProjectile::ABSProjectile()
 	ProjectileMovement->UpdatedComponent = CollisionComp;
 	ProjectileMovement->InitialSpeed = 3000.f;
 	ProjectileMovement->MaxSpeed = 3000.f;
+	ProjectileMovement->ProjectileGravityScale = 0.0f;
 	ProjectileMovement->bRotationFollowsVelocity = true;
-	ProjectileMovement->bShouldBounce = true;	
+	ProjectileMovement->OnProjectileStop.AddDynamic(this, &ABSProjectile::OnImpact);
 
 	// Die after 3 seconds by default
 	InitialLifeSpan = 3.0f;
 }
 
-void ABSProjectile::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+void ABSProjectile::OnImpact(const FHitResult& Hit)
 {
-	// Only add impulse and destroy projectile if we hit a physics
-	if ((OtherActor != NULL) && (OtherActor != this) && (OtherComp != NULL) && OtherComp->IsSimulatingPhysics())
+	if (HasAuthority())
 	{
-		UGameplayStatics::ApplyRadialDamageWithFalloff(this, Damage.BaseDamage, Damage.MinimumDamage, GetActorLocation(), Damage.InnerRadius, Damage.OuterRadius, Damage.DamageFalloff, DamageTypeClass, TArray<AActor*>{});
+		TArray<AActor*> ToIgnore;
+		ToIgnore.Add(this);
+
+		UGameplayStatics::ApplyRadialDamageWithFalloff(this, Damage.BaseDamage, Damage.MinimumDamage, GetActorLocation(), Damage.InnerRadius, Damage.OuterRadius, Damage.DamageFalloff, DamageTypeClass, ToIgnore);
+
+		if (ImpactEffect)
+		{
+			const FTransform SpawnTransform = GetTransform();
+
+			ABSImpactEffect* SpawnedEffect = GetWorld()->SpawnActorDeferred<ABSImpactEffect>(ImpactEffect, SpawnTransform, this);
+			SpawnedEffect->SurfaceHit = Hit;
+
+			UGameplayStatics::FinishSpawningActor(SpawnedEffect, SpawnTransform);
+		}
+
 		Destroy();
 	}
 }

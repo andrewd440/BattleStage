@@ -3,6 +3,9 @@
 #pragma once
 
 #include "GameFramework/Actor.h"
+#include "BSTypes.h"
+
+
 #include "BSImpactEffect.generated.h"
 
 UCLASS()
@@ -14,11 +17,19 @@ public:
 	// Sets default values for this actor's properties
 	ABSImpactEffect();
 
-	// #bstodo Need to create effects made in derived blueprints
+	/** AActor interface */
+	virtual void PostInitializeComponents() override;
+	/** AActor interface end */
 
-	//void SpawnEffect(AActor* Instigator, const FVector& Location, EReplicationOption ReplicationOption);
+	UPROPERTY(EditDefaultsOnly, Category = Impact)
+	class USoundBase* ImpactSound = nullptr;
 
-protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Effects)
-	class USoundBase* ImpactSound;
+	UPROPERTY(EditDefaultsOnly, Category = Impact)
+	class UParticleSystem* ImpactParticles = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = Impact)
+	FDecalInfo DecalInfo;
+
+	UPROPERTY(BlueprintReadOnly, Category = Impact)
+	FHitResult SurfaceHit;
 };

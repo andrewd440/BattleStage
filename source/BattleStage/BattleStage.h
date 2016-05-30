@@ -7,6 +7,6 @@
 #include "HeadMountedDisplay.h"
 
 
-DECLARE_LOG_CATEGORY_EXTERN(BattleStage, Warning, All);
+DECLARE_LOG_CATEGORY_EXTERN(BattleStage, Log, All);
 
 #endif

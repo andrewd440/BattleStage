@@ -40,7 +40,8 @@ void ABSPlayerController::SetupInputComponent()
 	InputComponent->BindAxis("LookUp", this, &ABSPlayerController::AddPitchInput);
 	InputComponent->BindAxis("LookUpRate", this, &ABSPlayerController::OnLookUpRate);
 
-	InputComponent->BindAction("Fire", IE_Pressed, this, &ABSPlayerController::OnFire);
+	InputComponent->BindAction("Fire", IE_Pressed, this, &ABSPlayerController::OnStartFire);
+	InputComponent->BindAction("Fire", IE_Released, this, &ABSPlayerController::OnStopFire);
 }
 
 void ABSPlayerController::ClientHearSound_Implementation(USoundBase* Sound, AActor* SourceActor, FVector_NetQuantize SoundLocation) const
@@ -99,10 +100,18 @@ void ABSPlayerController::OnLookUpRate(float Rate)
 	AddPitchInput(Rate * BaseLookRate * GetWorld()->GetDeltaSeconds());
 }
 
-void ABSPlayerController::OnFire()
+void ABSPlayerController::OnStartFire()
 {
 	if (BSCharacter)
 	{
-		BSCharacter->Fire();
+		BSCharacter->StartFire();
+	}
+}
+
+void ABSPlayerController::OnStopFire()
+{
+	if (BSCharacter)
+	{
+		BSCharacter->StopFire();
 	}
 }

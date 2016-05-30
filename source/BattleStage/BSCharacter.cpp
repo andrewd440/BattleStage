@@ -13,10 +13,8 @@ DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
 ABSCharacter::ABSCharacter()
 	: Super(FObjectInitializer::Get().DoNotCreateDefaultSubobject(ACharacter::MeshComponentName))
+	, WeaponEquippedSocket(TEXT("GripPoint"))
 {
-	// Set size for collision capsule
-	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
-
 	// First person camera
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
 	FirstPersonCamera->RelativeLocation = FVector(-39.56f, 1.75f, 64.f);
@@ -48,11 +46,19 @@ void ABSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(ABSCharacter, Weapon);
 }
 
-void ABSCharacter::Fire() const
+void ABSCharacter::StartFire()
 {
 	if (Weapon)
 	{
-		Weapon->Fire();
+		Weapon->StartFire();
+	}
+}
+
+void ABSCharacter::StopFire()
+{
+	if (Weapon)
+	{
+		Weapon->StopFire();
 	}
 }
 
@@ -64,9 +70,16 @@ void ABSCharacter::Tick(float DeltaSeconds)
 void ABSCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+}
 
-	if(HasAuthority())
+void ABSCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	if (HasAuthority())
+	{
 		EquipWeapon();
+	}
 }
 
 void ABSCharacter::PossessedBy(AController* NewController)
@@ -77,7 +90,7 @@ void ABSCharacter::PossessedBy(AController* NewController)
 
 void ABSCharacter::EquipWeapon()
 {
-	if (WeaponClass)
+	if (DefaultWeaponClass)
 	{
 		if (!HasAuthority())
 		{
@@ -88,8 +101,8 @@ void ABSCharacter::EquipWeapon()
 			FActorSpawnParameters SpawnParams;
 			SpawnParams.Instigator = this;
 			SpawnParams.Owner = this;
-			Weapon = GetWorld()->SpawnActor<ABSWeapon>(WeaponClass, SpawnParams);
-			Weapon->OnEquip(this);
+			Weapon = GetWorld()->SpawnActor<ABSWeapon>(DefaultWeaponClass, SpawnParams);
+			Weapon->ServerEquip(this);
 		}
 	}
 }
