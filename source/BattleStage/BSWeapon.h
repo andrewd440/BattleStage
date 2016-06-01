@@ -69,10 +69,10 @@ public:
 	virtual void Unequip();
 
 	UFUNCTION(BlueprintCallable, Category = Weapon)
-	virtual void StartFire();
+	void StartFire();
 
 	UFUNCTION(BlueprintCallable, Category = Weapon)
-	virtual void StopFire();
+	void StopFire();
 
 	/** AActor interface */
 	virtual void PostInitProperties() override;
@@ -80,10 +80,13 @@ public:
 
 protected:
 	// Owning client only.
-	virtual void FireShot();
+	void FireShot();
 
 	UFUNCTION(BlueprintCallable, Category = Weapon)
-	virtual bool CanFire() const;
+	bool CanFire() const;
+
+	UFUNCTION(BlueprintCallable, Category = Weapon)
+	bool CanReload() const;
 
 	/**
 	* Gets the rotation of a projectile to be fired from this weapon.

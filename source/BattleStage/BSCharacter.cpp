@@ -101,7 +101,7 @@ void ABSCharacter::EquipWeapon()
 			FActorSpawnParameters SpawnParams;
 			SpawnParams.Instigator = this;
 			SpawnParams.Owner = this;
-			Weapon = GetWorld()->SpawnActor<ABSWeapon>(DefaultWeaponClass, SpawnParams);
+			Weapon = GetWorld()->SpawnActor<ABSWeapon>(DefaultWeaponClass, SpawnParams);			
 			Weapon->ServerEquip(this);
 		}
 	}

@@ -7,6 +7,7 @@
 // Sets default values
 ABSImpactEffect::ABSImpactEffect()
 {
+	bReplicates = false;
 	InitialLifeSpan = 1.0f;
 }
 

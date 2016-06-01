@@ -29,8 +29,8 @@ void ABSWeapon::PostInitProperties()
 {
 	Super::PostInitProperties();
 
-	RemainingAmmo = WeaponFireData.MaxAmmo;
 	RemainingClip = WeaponFireData.ClipSize;
+	RemainingAmmo = WeaponFireData.MaxAmmo - RemainingClip;
 }
 
 void ABSWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -120,18 +120,25 @@ void ABSWeapon::SetWeaponState(EWeaponState State)
 		switch (State)
 		{
 		case EWeaponState::Firing:
-			if (CanFire() && RemainingClip <= 0)
-				State = EWeaponState::Reloading;
+			if (!CanFire())
+			{
+				if (CanReload())
+					State = EWeaponState::Reloading;
+				else
+					State = EWeaponState::Active;
+			}
 			break;
 		case EWeaponState::Reloading:
-			if (RemainingAmmo <= 0)
+			if (!CanReload())
 				State = EWeaponState::Active;
 			break;
 		case EWeaponState::Inactive:
-			check(WeaponState == EWeaponState::Unequipping && "ABSWeapon setting to inactive before unequipping.");
+			if(WeaponState != EWeaponState::Unequipping)
+				UE_LOG(BattleStage, Warning, TEXT("ABSWeapon setting to inactive before unequipping."));
 			break;
 		case EWeaponState::Equipping:
-			check(WeaponState == EWeaponState::Inactive && "ABSWeapon setting to equipping while not inactive.");
+			if(WeaponState != EWeaponState::Inactive)
+				UE_LOG(BattleStage, Warning, TEXT("ABSWeapon setting to equipping while not inactive."));
 			break;
 		}
 
@@ -221,10 +228,10 @@ bool ABSWeapon::ServerHandleNewWeaponState_Validate(const EWeaponState State)
 	switch (State)
 	{
 	case EWeaponState::Firing:
-		bIsValid = CanFire() && RemainingClip > 0;
+		bIsValid = CanFire();
 		break;
 	case EWeaponState::Reloading:
-		bIsValid = RemainingAmmo > 0;
+		bIsValid = CanReload();
 		break;
 	}
 
@@ -243,11 +250,12 @@ void ABSWeapon::ClientExitFiringState_Implementation()
 
 void ABSWeapon::FireShot()
 {
-	if (RemainingClip > 0)
+	if (CanFire())
 	{
 		ServerFire(GetFireLocation(), GetFireRotation().Vector());
+		PlayFireEffects();
 	}
-	else if (RemainingAmmo > 0)
+	else if (CanReload())
 	{
 		SetWeaponState(EWeaponState::Reloading);
 	}
@@ -332,6 +340,16 @@ void ABSWeapon::OnUnquipFinished()
 bool ABSWeapon::CanFire() const
 {
 	if (WeaponState == EWeaponState::Firing || WeaponState == EWeaponState::Active)
+	{
+		return RemainingClip > 0;
+	}
+
+	return false;
+}
+
+bool ABSWeapon::CanReload() const
+{
+	if (WeaponState == EWeaponState::Firing || WeaponState == EWeaponState::Active || WeaponState == EWeaponState::Reloading)
 	{
 		return RemainingAmmo > 0;
 	}

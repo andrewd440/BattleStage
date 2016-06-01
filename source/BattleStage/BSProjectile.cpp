@@ -37,22 +37,22 @@ ABSProjectile::ABSProjectile()
 
 void ABSProjectile::OnImpact(const FHitResult& Hit)
 {
+	if (ImpactEffect)
+	{
+		const FTransform SpawnTransform = GetTransform();
+
+		ABSImpactEffect* SpawnedEffect = GetWorld()->SpawnActorDeferred<ABSImpactEffect>(ImpactEffect, SpawnTransform, this);
+		SpawnedEffect->SurfaceHit = Hit;
+
+		UGameplayStatics::FinishSpawningActor(SpawnedEffect, SpawnTransform);
+	}
+
 	if (HasAuthority())
 	{
 		TArray<AActor*> ToIgnore;
 		ToIgnore.Add(this);
 
 		UGameplayStatics::ApplyRadialDamageWithFalloff(this, Damage.BaseDamage, Damage.MinimumDamage, GetActorLocation(), Damage.InnerRadius, Damage.OuterRadius, Damage.DamageFalloff, DamageTypeClass, ToIgnore);
-
-		if (ImpactEffect)
-		{
-			const FTransform SpawnTransform = GetTransform();
-
-			ABSImpactEffect* SpawnedEffect = GetWorld()->SpawnActorDeferred<ABSImpactEffect>(ImpactEffect, SpawnTransform, this);
-			SpawnedEffect->SurfaceHit = Hit;
-
-			UGameplayStatics::FinishSpawningActor(SpawnedEffect, SpawnTransform);
-		}
 
 		Destroy();
 	}
