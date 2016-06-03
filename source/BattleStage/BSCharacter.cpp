@@ -70,16 +70,16 @@ void ABSCharacter::Tick(float DeltaSeconds)
 void ABSCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-}
-
-void ABSCharacter::PostInitializeComponents()
-{
-	Super::PostInitializeComponents();
 
 	if (HasAuthority())
 	{
 		EquipWeapon();
 	}
+}
+
+void ABSCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
 }
 
 void ABSCharacter::PossessedBy(AController* NewController)

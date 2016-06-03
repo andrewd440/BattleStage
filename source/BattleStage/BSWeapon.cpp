@@ -60,8 +60,9 @@ void ABSWeapon::ServerEquip_Implementation(ABSCharacter* Character)
 {
 	BSCharacter = Character;
 
-	FAttachmentTransformRules AttachRules{ EAttachmentRule::SnapToTarget, true };
-	AttachToComponent(Character->GetFirstPersonMesh(), AttachRules, Character->GetWeaponEquippedSocket());
+	const FAttachmentTransformRules AttachRules{ EAttachmentRule::SnapToTarget, true };
+	const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
+	AttachToComponent(BSCharacter->GetFirstPersonMesh(), AttachRules, AttachSocket);
 
 	SetWeaponState(EWeaponState::Equipping);
 }

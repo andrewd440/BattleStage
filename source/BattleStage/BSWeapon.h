@@ -319,6 +319,11 @@ private:
 	uint32 bServerFired:1;
 
 private:
+
+	//-----------------------------------------------------------------
+	// Replicated Usings
+	//-----------------------------------------------------------------
+	
 	UFUNCTION()
 	virtual void OnRep_ServerFired();
 
