@@ -84,8 +84,9 @@ void ABSCharacter::PostInitializeComponents()
 
 void ABSCharacter::PossessedBy(AController* NewController)
 {
-	SetOwner(NewController);
 	Super::PossessedBy(NewController);
+
+	SetOwner(NewController);
 }
 
 void ABSCharacter::EquipWeapon()

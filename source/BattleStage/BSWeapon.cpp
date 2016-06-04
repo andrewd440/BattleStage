@@ -10,12 +10,25 @@ ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 	, MuzzleSocket(TEXT("MuzzleAttach"))
 {
-	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
-	Mesh->bDisableClothSimulation = true;
-	Mesh->SetCollisionProfileName("CharacterMesh");
-	RootComponent = Mesh;
+	MeshFP = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshFP"));
+	MeshFP->SetCollisionProfileName("CharacterMesh");
+	MeshFP->SetCastShadow(false);
+	MeshFP->bDisableClothSimulation = true;
+	MeshFP->bReceivesDecals = false;
+	MeshFP->bOnlyOwnerSee = true;
+	RootComponent = MeshFP;
+
+
+	MeshTP = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshTP"));
+	MeshTP->SetCollisionProfileName("CharacterMesh");
+	MeshTP->SetCastShadow(true);
+	MeshTP->bReceivesDecals = false;
+	MeshTP->bDisableClothSimulation = true;
+	MeshTP->bOwnerNoSee = true;
+	MeshTP->SetupAttachment(RootComponent);
 
 	bReplicates = true;
+	bCanBeDamaged = false;
 
 	// Default weapon fire data
 	WeaponFireData.MaxAmmo = 120;
@@ -60,9 +73,13 @@ void ABSWeapon::ServerEquip_Implementation(ABSCharacter* Character)
 {
 	BSCharacter = Character;
 
+	// Attach MeshTP. Contolling clients will attach MeshFP on rep.
 	const FAttachmentTransformRules AttachRules{ EAttachmentRule::SnapToTarget, true };
 	const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
-	AttachToComponent(BSCharacter->GetFirstPersonMesh(), AttachRules, AttachSocket);
+	MeshTP->AttachToComponent(BSCharacter->GetCharacterMesh(), AttachRules, AttachSocket);
+
+	if (GetNetMode() != NM_DedicatedServer)
+		OnRep_BSCharacter();
 
 	SetWeaponState(EWeaponState::Equipping);
 }
@@ -107,11 +124,11 @@ void ABSWeapon::PlayFireEffects()
 			MuzzleFXComponent->DestroyComponent();
 		}
 
-		MuzzleFXComponent = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, Mesh, MuzzleSocket);	
+		MuzzleFXComponent = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, BSCharacter->IsLocallyControlled() ? MeshFP : MeshTP, MuzzleSocket);	
 	}
 
 	if(FireSound)
-		UGameplayStatics::SpawnSoundAttached(FireSound, Mesh, MuzzleSocket);
+		UGameplayStatics::SpawnSoundAttached(FireSound, BSCharacter->IsLocallyControlled() ? MeshFP : MeshTP, MuzzleSocket);
 }
 
 void ABSWeapon::SetWeaponState(EWeaponState State)
@@ -387,6 +404,16 @@ void ABSWeapon::OnRep_WeaponState()
 	PrevWeaponState = WeaponState;
 }
 
+void ABSWeapon::OnRep_BSCharacter()
+{
+	if (BSCharacter->IsLocallyControlled())
+	{
+		const FAttachmentTransformRules AttachRules{ EAttachmentRule::SnapToTarget, true };
+		const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
+		MeshFP->AttachToComponent(BSCharacter->GetFirstPersonMesh(), AttachRules, AttachSocket);
+	}
+}
+
 FRotator ABSWeapon::GetFireRotation_Implementation() const
 {
 	return BSCharacter->GetViewRotation();
@@ -394,7 +421,7 @@ FRotator ABSWeapon::GetFireRotation_Implementation() const
 
 FVector ABSWeapon::GetFireLocation_Implementation() const
 {
-	return Mesh->GetSocketLocation(MuzzleSocket);
+	return BSCharacter->IsLocallyControlled() ? MeshFP->GetSocketLocation(MuzzleSocket) : MeshTP->GetSocketLocation(MuzzleSocket);
 }
 
 float ABSWeapon::PlayEquipSequence()

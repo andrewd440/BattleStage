@@ -184,12 +184,16 @@ protected:
 
 protected:
 	// The character that has this weapon equipped. 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Replicated, Category = Defaults)
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, ReplicatedUsing=OnRep_BSCharacter, Category = Defaults)
 	class ABSCharacter* BSCharacter = nullptr;
 
-	// Mesh for the weapon
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Defaults)
-	class USkeletalMeshComponent* Mesh;
+	// Third person mesh for the weapon
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = Defaults)
+	class USkeletalMeshComponent* MeshTP;
+
+	// First person mesh for the weapon
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = Defaults)
+	class USkeletalMeshComponent* MeshFP;
 
 	// Socket attachment for the muzzle location. 
 	UPROPERTY(EditDefaultsOnly, Category = Defaults)
@@ -329,4 +333,7 @@ private:
 
 	UFUNCTION()
 	virtual void OnRep_WeaponState();
+
+	UFUNCTION()
+	virtual void OnRep_BSCharacter();
 };
