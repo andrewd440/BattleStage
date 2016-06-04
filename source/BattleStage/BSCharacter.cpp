@@ -12,7 +12,7 @@
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
 ABSCharacter::ABSCharacter()
-	: Super(FObjectInitializer::Get().DoNotCreateDefaultSubobject(ACharacter::MeshComponentName))
+	: Super()
 	, WeaponEquippedSocket(TEXT("GripPoint"))
 {
 	// First person camera
@@ -33,10 +33,10 @@ ABSCharacter::ABSCharacter()
 
 	// Setup character mesh.
 	// Owner can not see and does replicate.
-	CharacterMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CharacterMesh"));
-	CharacterMesh->SetOwnerNoSee(true);
-	CharacterMesh->SetIsReplicated(true);
-	CharacterMesh->SetupAttachment(GetCapsuleComponent());
+	USkeletalMeshComponent* Mesh = GetMesh();
+	Mesh->SetOwnerNoSee(true);
+	Mesh->SetIsReplicated(true);
+	Mesh->SetupAttachment(GetCapsuleComponent());
 }
 
 void ABSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -62,6 +62,11 @@ void ABSCharacter::StopFire()
 	}
 }
 
+USkeletalMeshComponent* ABSCharacter::GetActiveMesh() const
+{
+	return IsFirstPerson() ? FirstPersonMesh : GetThirdPersonMesh();
+}
+
 void ABSCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -77,9 +82,33 @@ void ABSCharacter::BeginPlay()
 	}
 }
 
+float ABSCharacter::PlayAnimMontage(class UAnimMontage* AnimMontage, float InPlayRate /*= 1.f*/, FName StartSectionName /*= NAME_None*/)
+{
+	float Duration = 0.f;
+
+	if (AnimMontage)
+	{
+		USkeletalMeshComponent* Mesh = GetActiveMesh();
+		UAnimInstance* AnimInstance = Mesh->GetAnimInstance();
+		Duration = AnimInstance->Montage_Play(AnimMontage, InPlayRate);
+
+		if (Duration > 0 && StartSectionName != NAME_None)
+		{
+			AnimInstance->Montage_JumpToSection(StartSectionName, AnimMontage);
+		}
+	}
+
+	return Duration;
+}
+
 void ABSCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
+}
+
+bool ABSCharacter::IsFirstPerson() const
+{
+	return IsLocallyControlled();
 }
 
 void ABSCharacter::PossessedBy(AController* NewController)

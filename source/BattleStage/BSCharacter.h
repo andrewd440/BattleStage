@@ -19,10 +19,6 @@ class ABSCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
 	class USkeletalMeshComponent* FirstPersonMesh;
 
-	/** Character mesh */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
-	class USkeletalMeshComponent* CharacterMesh;
-
 public:
 	ABSCharacter();
 
@@ -30,6 +26,19 @@ public:
 
 	virtual void StartFire();
 	virtual void StopFire();
+
+	/**
+	* Returns the dominate mesh used for this character. Will be the first person mesh
+	* for first person characters, otherwise it will be the third person mesh.
+	*/
+	UFUNCTION(BlueprintCallable, Category = Mesh)
+	USkeletalMeshComponent* GetActiveMesh() const;
+	
+	/**
+	* Checks if this is a first person character.
+	*/
+	UFUNCTION(BlueprintCallable, Category = Mesh)
+	bool IsFirstPerson() const;
 
 	/** ACharacter interface */\
 	virtual void PossessedBy(AController* NewController) override;
@@ -39,6 +48,13 @@ public:
 
 	/** AActor interface */
 	virtual void BeginPlay() override;
+
+	/** 
+	 * Play Animation Montage on the character mesh. Will play on the first person mesh if
+	 * this is a first person character, otherwise it will be played on the third person mesh.
+	 */
+	virtual float PlayAnimMontage(class UAnimMontage* AnimMontage, float InPlayRate = 1.f, FName StartSectionName = NAME_None) override;
+
 	/** AActor interface end*/
 
 protected:
@@ -66,8 +82,8 @@ public:
 	/** Returns FirstPersonMesh subobject **/
 	FORCEINLINE class USkeletalMeshComponent* GetFirstPersonMesh() const { return FirstPersonMesh; }
 
-	/** Returns CharacterMesh subobject **/
-	FORCEINLINE class USkeletalMeshComponent* GetCharacterMesh() const { return CharacterMesh; }
+	/** Returns ThirdPersonMesh subobject **/
+	FORCEINLINE class USkeletalMeshComponent* GetThirdPersonMesh() const { return GetMesh(); }
 
 	/** Gets the name of the socket to attach equipped weapons. */
 	FORCEINLINE FName GetWeaponEquippedSocket() const { return WeaponEquippedSocket; }

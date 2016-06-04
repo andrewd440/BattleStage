@@ -4,6 +4,7 @@
 
 #include "GameFramework/Actor.h"
 #include "BSProjectile.h"
+#include "BSCharacter.h"
 #include "BSWeapon.generated.h"
 
 class ABSCharacter;
@@ -73,6 +74,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	void StopFire();
+
+	USkeletalMeshComponent* GetActiveMesh() const;
 
 	/** AActor interface */
 	virtual void PostInitProperties() override;
@@ -209,7 +212,7 @@ public:
 
 	// Get remaining ammo
 	UFUNCTION(BlueprintCallable, Category = Weapon)
-	int32 GetCurrentAmmo() const { return RemainingAmmo; }
+	int32 GetRemainingAmmo() const { return RemainingAmmo; }
 
 	// Get ammo left in clip
 	UFUNCTION(BlueprintCallable, Category = Weapon)
@@ -337,3 +340,5 @@ private:
 	UFUNCTION()
 	virtual void OnRep_BSCharacter();
 };
+
+FORCEINLINE USkeletalMeshComponent* ABSWeapon::GetActiveMesh() const { return BSCharacter->IsFirstPerson() ? MeshFP : MeshTP; }

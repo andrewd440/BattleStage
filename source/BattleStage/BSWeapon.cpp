@@ -76,7 +76,7 @@ void ABSWeapon::ServerEquip_Implementation(ABSCharacter* Character)
 	// Attach MeshTP. Contolling clients will attach MeshFP on rep.
 	const FAttachmentTransformRules AttachRules{ EAttachmentRule::SnapToTarget, true };
 	const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
-	MeshTP->AttachToComponent(BSCharacter->GetCharacterMesh(), AttachRules, AttachSocket);
+	MeshTP->AttachToComponent(BSCharacter->GetThirdPersonMesh(), AttachRules, AttachSocket);
 
 	if (GetNetMode() != NM_DedicatedServer)
 		OnRep_BSCharacter();
@@ -124,11 +124,11 @@ void ABSWeapon::PlayFireEffects()
 			MuzzleFXComponent->DestroyComponent();
 		}
 
-		MuzzleFXComponent = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, BSCharacter->IsLocallyControlled() ? MeshFP : MeshTP, MuzzleSocket);	
+		MuzzleFXComponent = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, GetActiveMesh(), MuzzleSocket);	
 	}
 
 	if(FireSound)
-		UGameplayStatics::SpawnSoundAttached(FireSound, BSCharacter->IsLocallyControlled() ? MeshFP : MeshTP, MuzzleSocket);
+		UGameplayStatics::SpawnSoundAttached(FireSound, GetActiveMesh(), MuzzleSocket);
 }
 
 void ABSWeapon::SetWeaponState(EWeaponState State)
@@ -406,7 +406,7 @@ void ABSWeapon::OnRep_WeaponState()
 
 void ABSWeapon::OnRep_BSCharacter()
 {
-	if (BSCharacter->IsLocallyControlled())
+	if (BSCharacter->IsFirstPerson())
 	{
 		const FAttachmentTransformRules AttachRules{ EAttachmentRule::SnapToTarget, true };
 		const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
@@ -421,7 +421,7 @@ FRotator ABSWeapon::GetFireRotation_Implementation() const
 
 FVector ABSWeapon::GetFireLocation_Implementation() const
 {
-	return BSCharacter->IsLocallyControlled() ? MeshFP->GetSocketLocation(MuzzleSocket) : MeshTP->GetSocketLocation(MuzzleSocket);
+	return GetActiveMesh()->GetSocketLocation(MuzzleSocket);
 }
 
 float ABSWeapon::PlayEquipSequence()
