@@ -1,14 +1,18 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "BattleStage.h"
-#include "BSWeapon.h"
-#include "BSCharacter.h"
+
 #include "UnrealNetwork.h"
+
+#include "BSCharacter.h"
 #include "BSNetworkUtils.h"
+#include "BSShotType.h"
+#include "BSWeapon.h"
 
 ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 	, MuzzleSocket(TEXT("MuzzleAttach"))
+	, ShotTypeClass(nullptr)
 {
 	MeshFP = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshFP"));
 	MeshFP->SetCollisionProfileName("CharacterMesh");
@@ -105,13 +109,15 @@ void ABSWeapon::StopFire()
 		SetWeaponState(EWeaponState::Active);
 }
 
-void ABSWeapon::SpawnProjectile(const FVector& Position, const FVector_NetQuantizeNormal& Direction)
+void ABSWeapon::InvokeWeaponShot(const FVector& Position, const FVector_NetQuantizeNormal& Direction)
 {
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = this;
-	SpawnParams.Instigator = BSCharacter;
+	if (ShotTypeClass)
+	{
+		UBSShotType* DefaultShot = ShotTypeClass->GetDefaultObject<UBSShotType>();
 
-	GetWorld()->SpawnActor<ABSProjectile>(ProjectileClass, Position, Direction.Rotation(), SpawnParams);
+		const FShotTypeFireParams FireParams(this, BSCharacter, Position, Direction);
+		DefaultShot->Fire(FireParams);
+	}
 }
 
 void ABSWeapon::PlayFireEffects()
@@ -297,8 +303,7 @@ void ABSWeapon::ServerFire_Implementation(FVector Position, FVector_NetQuantizeN
 	{
 		RemainingClip--;
 
-		if (ProjectileClass)
-			SpawnProjectile(Position, Direction);
+		InvokeWeaponShot(Position, Direction);
 
 		bServerFired = !bServerFired;
 

@@ -77,14 +77,6 @@ public:
 
 	USkeletalMeshComponent* GetActiveMesh() const;
 
-	/** AActor interface */
-	virtual void PostInitProperties() override;
-	/** AActor interface end */
-
-protected:
-	// Owning client only.
-	void FireShot();
-
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	bool CanFire() const;
 
@@ -96,14 +88,23 @@ protected:
 	*/
 	UFUNCTION(BlueprintNativeEvent, Category = Weapon)
 	FRotator GetFireRotation() const;
-	virtual FRotator GetFireRotation_Implementation() const;
 
 	/**
 	* Gets the world location of a projectile to be fired from this weapon.
 	*/
 	UFUNCTION(BlueprintNativeEvent, Category = Weapon)
 	FVector GetFireLocation() const;
+
+	/** AActor interface */
+	virtual void PostInitProperties() override;
+	/** AActor interface end */
+
+protected:
 	virtual FVector GetFireLocation_Implementation() const;
+	virtual FRotator GetFireRotation_Implementation() const;
+
+	// Owning client only.
+	void FireShot();
 
 	/**
 	* Starts the equip sequence. Activates effects that should be played on clients, 
@@ -231,7 +232,7 @@ protected:
 
 	// The projectile class fired by this weapon
 	UPROPERTY(EditDefaultsOnly, Category = WeaponData)
-	TSubclassOf<class ABSProjectile> ProjectileClass = nullptr;
+	TSubclassOf<class UBSShotType> ShotTypeClass = nullptr;
 
 	// Timer used by this server to manage weapon state changes
 	// and invoke actions. Should not be used on clients.
@@ -241,19 +242,20 @@ protected:
 	// automatic weapons and the FireRate.
 	FTimerHandle WeaponFiringTimer;
 
+	// Game time when the last shot was fired.
 	float LastFireTime = 0.f;
 
 private:
 	// Current state of the weapon
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, ReplicatedUsing = OnRep_WeaponState, Category = WeaponData, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_WeaponState, Category = WeaponData, meta = (AllowPrivateAccess = "true"))
 	TEnumAsByte<EWeaponState> WeaponState = EWeaponState::Inactive;
 
 	// Current ammo count
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Replicated, Category = WeaponData, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = WeaponData, meta = (AllowPrivateAccess = "true"))
 	int32 RemainingAmmo;
 
 	// Remaining ammo left in the current clip
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Replicated, Category = WeaponData, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = WeaponData, meta = (AllowPrivateAccess = "true"))
 	int32 RemainingClip;
 
 	//-----------------------------------------------------------------
@@ -306,9 +308,9 @@ protected:
 
 protected:	
 	/**
-	* Spawns the weapon projectile. ProjectileClass must be non-null.
+	* Invokes the shot type to fire for this weapon.
 	*/
-	virtual void SpawnProjectile(const FVector& Position, const FVector_NetQuantizeNormal& Direction);
+	virtual void InvokeWeaponShot(const FVector& Position, const FVector_NetQuantizeNormal& Direction);
 
 	/**
 	* Plays the fire effects for the weapon. Only plays effect for the

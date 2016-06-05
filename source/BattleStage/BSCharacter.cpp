@@ -17,26 +17,26 @@ ABSCharacter::ABSCharacter()
 {
 	// First person camera
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
-	FirstPersonCamera->RelativeLocation = FVector(-39.56f, 1.75f, 64.f);
+	FirstPersonCamera->RelativeLocation = FVector(2.57f, -4.72f, 72.54f);
 	FirstPersonCamera->bUsePawnControlRotation = true;
 	FirstPersonCamera->SetupAttachment(GetCapsuleComponent());
-	
+
 	// Setup first person mesh.
 	// Only owner can see and does not replicate.
 	FirstPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FirstPersonMesh"));
-	FirstPersonMesh->SetOnlyOwnerSee(true);
-	FirstPersonMesh->SetIsReplicated(false);
 	FirstPersonMesh->SetupAttachment(FirstPersonCamera);
 	FirstPersonMesh->SetCastShadow(false);
-	FirstPersonMesh->RelativeRotation = FRotator(1.9f, -19.19f, 5.2f);
-	FirstPersonMesh->RelativeLocation = FVector(-0.5f, -4.4f, -155.7f);
+	FirstPersonMesh->bOnlyOwnerSee = true;
+	FirstPersonMesh->RelativeRotation = FRotator{ -3.3f, -107.75f, -4.88f };
+	FirstPersonMesh->RelativeLocation = FVector{ 10.22f, 22.63f, -157.02f };
 
 	// Setup character mesh.
 	// Owner can not see and does replicate.
 	USkeletalMeshComponent* Mesh = GetMesh();
-	Mesh->SetOwnerNoSee(true);
-	Mesh->SetIsReplicated(true);
 	Mesh->SetupAttachment(GetCapsuleComponent());
+	Mesh->bOwnerNoSee = true;
+	Mesh->RelativeLocation = FVector{ 0.f, 0.f, -GetCapsuleComponent()->GetScaledCapsuleHalfHeight() };
+	Mesh->RelativeRotation = FRotator{ 0.f, -90.f, 0.f };
 }
 
 void ABSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
