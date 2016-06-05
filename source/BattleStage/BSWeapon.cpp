@@ -129,6 +129,9 @@ void ABSWeapon::PlayFireEffects()
 
 	if(FireSound)
 		UGameplayStatics::SpawnSoundAttached(FireSound, GetActiveMesh(), MuzzleSocket);
+
+	if (FireAnim)
+		BSCharacter->PlayAnimMontage(FireAnim);
 }
 
 void ABSWeapon::SetWeaponState(EWeaponState State)
