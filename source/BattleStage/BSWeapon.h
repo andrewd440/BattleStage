@@ -241,6 +241,8 @@ protected:
 	// automatic weapons and the FireRate.
 	FTimerHandle WeaponFiringTimer;
 
+	float LastFireTime = 0.f;
+
 private:
 	// Current state of the weapon
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, ReplicatedUsing = OnRep_WeaponState, Category = WeaponData, meta = (AllowPrivateAccess = "true"))

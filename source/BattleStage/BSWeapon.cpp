@@ -261,7 +261,11 @@ bool ABSWeapon::ServerHandleNewWeaponState_Validate(const EWeaponState State)
 
 void ABSWeapon::ClientEnteredFiringState_Implementation()
 {
-	GetWorldTimerManager().SetTimer(WeaponFiringTimer, this, &ABSWeapon::FireShot, WeaponFireData.FireRate, WeaponFireData.bIsAuto, 0.f);
+	// Use delay to prevent tap firing faster than the fire rate of the weapon.
+	const float CurrentTime = GetWorld()->GetTimeSeconds();
+	const float ShotDelay = FMath::Max(0.f, WeaponFireData.FireRate - (CurrentTime - LastFireTime));
+
+	GetWorldTimerManager().SetTimer(WeaponFiringTimer, this, &ABSWeapon::FireShot, WeaponFireData.FireRate, WeaponFireData.bIsAuto, ShotDelay);
 }
 
 void ABSWeapon::ClientExitFiringState_Implementation()
@@ -275,6 +279,7 @@ void ABSWeapon::FireShot()
 	{
 		ServerFire(GetFireLocation(), GetFireRotation().Vector());
 		PlayFireEffects();
+		LastFireTime = GetWorld()->GetTimeSeconds();
 	}
 	else if (CanReload())
 	{
