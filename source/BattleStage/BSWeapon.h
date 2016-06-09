@@ -83,17 +83,30 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	bool CanReload() const;
 
+
 	/**
-	* Gets the rotation of a projectile to be fired from this weapon.
+	* Get the character that owns this weapon.
+	*/
+	ABSCharacter* GetCharacter() const;
+
+	/**
+	* Gets the desired rotation of a shot that is fired from this weapon.
 	*/
 	UFUNCTION(BlueprintNativeEvent, Category = Weapon)
 	FRotator GetFireRotation() const;
 
 	/**
-	* Gets the world location of a projectile to be fired from this weapon.
+	* Gets desired start position of a shot that is fired from this weapon.
 	*/
 	UFUNCTION(BlueprintNativeEvent, Category = Weapon)
 	FVector GetFireLocation() const;
+
+	
+	/**
+	* Only called on the server. Notifies the weapon that a shot has been fired
+	* and to activate any unnecessary events.
+	*/
+	void NotifyFired();
 
 	/** AActor interface */
 	virtual void PostInitProperties() override;
@@ -234,6 +247,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = WeaponData)
 	TSubclassOf<class UBSShotType> ShotTypeClass = nullptr;
 
+	UPROPERTY(VisibleAnywhere, Category = WeaponData)
+	class UBSShotType* ShotType = nullptr;
+
 	// Timer used by this server to manage weapon state changes
 	// and invoke actions. Should not be used on clients.
 	FTimerHandle WeaponStateTimer;
@@ -258,10 +274,11 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = WeaponData, meta = (AllowPrivateAccess = "true"))
 	int32 RemainingClip;
 
+protected:
 	//-----------------------------------------------------------------
 	// Weapon Sounds
 	//-----------------------------------------------------------------
-protected:
+	
 	// Sound effect on weapon begin fire
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Sound)
 	USoundBase* BeginFireSound = nullptr;
@@ -307,10 +324,6 @@ protected:
 	class UParticleSystemComponent* MuzzleFXComponent = nullptr;
 
 protected:	
-	/**
-	* Invokes the shot type to fire for this weapon.
-	*/
-	virtual void InvokeWeaponShot(const FVector& Position, const FVector_NetQuantizeNormal& Direction);
 
 	/**
 	* Plays the fire effects for the weapon. Only plays effect for the
@@ -318,10 +331,6 @@ protected:
 	* and sounds.
 	*/
 	virtual void PlayFireEffects();
-
-private:
-	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerFire(FVector Position, FVector_NetQuantizeNormal Direction);
 
 private:
 	// Toggle flag that indicates that the server fired a shot when changed.
@@ -332,7 +341,7 @@ private:
 private:
 
 	//-----------------------------------------------------------------
-	// Replicated Usings
+	// On Replicated
 	//-----------------------------------------------------------------
 	
 	UFUNCTION()
@@ -346,3 +355,5 @@ private:
 };
 
 FORCEINLINE USkeletalMeshComponent* ABSWeapon::GetActiveMesh() const { return BSCharacter->IsFirstPerson() ? MeshFP : MeshTP; }
+
+FORCEINLINE ABSCharacter* ABSWeapon::GetCharacter() const { return BSCharacter; }

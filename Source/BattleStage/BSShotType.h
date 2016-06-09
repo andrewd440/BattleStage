@@ -3,32 +3,8 @@
 #pragma once
 
 #include "Object.h"
+#include "BSWeapon.h"
 #include "BSShotType.generated.h"
-
-class ABSWeapon;
-
-//-----------------------------------------------------------------
-// Parameters used when fire shots through shot types.
-//-----------------------------------------------------------------
-USTRUCT()
-struct FShotTypeFireParams
-{
-	GENERATED_USTRUCT_BODY()
-
-	AActor* Owner = nullptr;
-	APawn* Instigator = nullptr;
-	FVector Position = FVector::ZeroVector;
-	FVector Direction = FVector::ForwardVector;
-
-	FShotTypeFireParams() = default;
-
-	FShotTypeFireParams(AActor* InOwner, APawn* InInstigator, const FVector& InPosition, const FVector& InDirection)
-		: Owner(InOwner)
-		, Instigator(InInstigator)
-		, Position(InPosition)
-		, Direction(InDirection) 
-	{}
-};
 
 /**
  * 
@@ -42,11 +18,15 @@ public:
 
 	/**
 	*
-	* @note Implementers, default objects will be used to fire shots, so no internal state should
-	*		be changed on Fire().
 	* @param FireParams
 	* @returns
 	*/
 	UFUNCTION(BlueprintCallable, Category = ShotType)
-	virtual void Fire(const FShotTypeFireParams& FireParams) const PURE_VIRTUAL(UBSShotType::Fire,);
+	virtual void FireShot() PURE_VIRTUAL(UBSShotType::FireShot,);
+
+protected:
+	ABSWeapon* GetWeapon() const;
 };
+
+
+FORCEINLINE ABSWeapon* UBSShotType::GetWeapon() const { check(Cast<ABSWeapon>(GetOuter())); return static_cast<ABSWeapon*>(GetOuter()); }

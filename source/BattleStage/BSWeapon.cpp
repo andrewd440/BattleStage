@@ -48,6 +48,11 @@ void ABSWeapon::PostInitProperties()
 
 	RemainingClip = WeaponFireData.ClipSize;
 	RemainingAmmo = WeaponFireData.MaxAmmo - RemainingClip;
+
+	if (ShotTypeClass)
+	{
+		ShotType = NewObject<UBSShotType>(this, ShotTypeClass, TEXT("ShotType"));
+	}
 }
 
 void ABSWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -107,17 +112,6 @@ void ABSWeapon::StopFire()
 {
 	if(WeaponState != EWeaponState::Reloading)
 		SetWeaponState(EWeaponState::Active);
-}
-
-void ABSWeapon::InvokeWeaponShot(const FVector& Position, const FVector_NetQuantizeNormal& Direction)
-{
-	if (ShotTypeClass)
-	{
-		UBSShotType* DefaultShot = ShotTypeClass->GetDefaultObject<UBSShotType>();
-
-		const FShotTypeFireParams FireParams(this, BSCharacter, Position, Direction);
-		DefaultShot->Fire(FireParams);
-	}
 }
 
 void ABSWeapon::PlayFireEffects()
@@ -283,9 +277,16 @@ void ABSWeapon::FireShot()
 {
 	if (CanFire())
 	{
-		ServerFire(GetFireLocation(), GetFireRotation().Vector());
-		PlayFireEffects();
-		LastFireTime = GetWorld()->GetTimeSeconds();
+		if (!ShotType)
+		{
+			UE_LOG(BattleStage, Warning, TEXT("ABSWeapon trying to fire without a valid ShotType"));
+		}
+		else
+		{
+			ShotType->FireShot();
+			PlayFireEffects();
+			LastFireTime = GetWorld()->GetTimeSeconds();
+		}
 	}
 	else if (CanReload())
 	{
@@ -297,32 +298,15 @@ void ABSWeapon::FireShot()
 	}
 }
 
-void ABSWeapon::ServerFire_Implementation(FVector Position, FVector_NetQuantizeNormal Direction)
+void ABSWeapon::NotifyFired()
 {
-	if (RemainingClip > 0)
-	{
-		RemainingClip--;
+	// #bstodo Check ammo and switch state?
+	RemainingClip--;
 
-		InvokeWeaponShot(Position, Direction);
+	bServerFired = !bServerFired;
 
-		bServerFired = !bServerFired;
-
-		if (GetNetMode() != NM_DedicatedServer)
-			OnRep_ServerFired();
-	}
-	else if (RemainingAmmo > 0)
-	{
-		SetWeaponState(EWeaponState::Reloading);
-	}
-	else
-	{
-		SetWeaponState(EWeaponState::Active);
-	}
-}
-
-bool ABSWeapon::ServerFire_Validate(FVector Position, FVector_NetQuantizeNormal Direction)
-{
-	return true;
+	if (GetNetMode() != NM_DedicatedServer)
+		OnRep_ServerFired();
 }
 
 void ABSWeapon::PlayBeginFireSequence()

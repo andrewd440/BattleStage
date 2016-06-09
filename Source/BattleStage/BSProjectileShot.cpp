@@ -3,21 +3,46 @@
 #include "BattleStage.h"
 #include "BSProjectileShot.h"
 #include "BSProjectile.h"
+#include "BSWeapon.h"
 
-void UBSProjectileShot::Fire(const FShotTypeFireParams& FireParams) const
+void UBSProjectileShot::FireShot()
 {
-	if (!FireParams.Owner)
+	ABSWeapon* const Weapon = GetWeapon();
+	const FVector Location = Weapon->GetFireLocation();
+	const FVector Direction = Weapon->GetFireRotation().Vector();
+
+	if (Weapon->HasAuthority())
 	{
-		UE_LOG(BattleStage, Warning, TEXT("UBSProjectileShot::Fire() called without a valid Owner."))
+		SpawnProjectile(Location, Direction);
+		Weapon->NotifyFired();
 	}
-	else if(ProjectileClass)
+	else
 	{
-		UWorld* World = FireParams.Owner->GetWorld();
+		ServerFireShot(Location, Direction);
+	}
+}
+
+void UBSProjectileShot::SpawnProjectile(FVector Location, FVector_NetQuantize Direction) const
+{
+	if (ProjectileType)
+	{
+		ABSWeapon* const Weapon = GetWeapon();
+		UWorld* World = Weapon->GetWorld();
 
 		FActorSpawnParameters SpawnParams;
-		SpawnParams.Owner = FireParams.Owner;
-		SpawnParams.Instigator = FireParams.Instigator;
+		SpawnParams.Owner = Weapon;
+		SpawnParams.Instigator = Weapon->GetCharacter();
 
-		World->SpawnActor<ABSProjectile>(ProjectileClass, FireParams.Position, FireParams.Direction.Rotation(), SpawnParams);
+		World->SpawnActor<ABSProjectile>(ProjectileType, Location, Direction.Rotation(), SpawnParams);
 	}
+}
+
+void UBSProjectileShot::ServerFireShot_Implementation(FVector Location, FVector_NetQuantize Direction) const
+{
+	SpawnProjectile(Location, Direction);
+}
+
+bool UBSProjectileShot::ServerFireShot_Validate(FVector Location, FVector_NetQuantize Direction)
+{
+	return true;
 }

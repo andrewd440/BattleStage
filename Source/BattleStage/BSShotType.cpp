@@ -2,7 +2,3 @@
 
 #include "BattleStage.h"
 #include "BSShotType.h"
-
-
-
-

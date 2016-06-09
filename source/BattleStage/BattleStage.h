@@ -9,4 +9,6 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(BattleStage, Log, All);
 
+#define WEAPON_CHANNEL ECC_GameTraceChannel1
+
 #endif

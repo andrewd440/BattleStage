@@ -68,7 +68,7 @@ void ABSPlayerController::OnMoveForward(float Value)
 	APawn* Pawn = GetPawn();
 	if (Pawn && Value != 0.0f)
 	{
-		Pawn->AddMovementInput(GetActorForwardVector(), Value);
+		Pawn->AddMovementInput(GetActorForwardVector().GetSafeNormal2D() , Value);
 	}
 }
 
@@ -77,7 +77,7 @@ void ABSPlayerController::OnMoveRight(float Value)
 	APawn* Pawn = GetPawn();
 	if (Pawn && Value != 0.0f)
 	{
-		Pawn->AddMovementInput(GetActorRightVector(), Value);
+		Pawn->AddMovementInput(GetActorRightVector().GetSafeNormal2D(), Value);
 	}
 }
 

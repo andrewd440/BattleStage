@@ -14,10 +14,19 @@ class BATTLESTAGE_API UBSProjectileShot : public UBSShotType
 	GENERATED_BODY()
 	
 public:
-	UFUNCTION(BlueprintCallable, Category = ShotType)
-	virtual void Fire(const FShotTypeFireParams& FireParams) const override;
+
+	/** UBSShotType interface */
+	UFUNCTION(BlueprintCallable, Category = ProjectileShot)
+	virtual void FireShot() override;
+	/** UBSShotType interface end */
 
 protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = ShotType)
-	TSubclassOf<class ABSProjectile> ProjectileClass = nullptr;
+	UFUNCTION(Server, Unreliable, WithValidation)
+	virtual void ServerFireShot(FVector Location, FVector_NetQuantize Direction) const;
+
+	virtual void SpawnProjectile(FVector Location, FVector_NetQuantize Direction) const;
+
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = ProjectileShot)
+	TSubclassOf<class ABSProjectile> ProjectileType = nullptr;
 };
