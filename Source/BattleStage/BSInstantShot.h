@@ -6,23 +6,65 @@
 #include "BSInstantShot.generated.h"
 
 
+USTRUCT()
+struct FInstantShotRep
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FVector_NetQuantizeNormal Direction = FVector::ForwardVector;
+
+	UPROPERTY()
+	uint32 FireToggle : 1;
+
+	bool operator==(const FInstantShotRep& Other)
+	{
+		return Direction == Direction && FireToggle == FireToggle;
+	}
+
+	bool operator!=(const FInstantShotRep& Other)
+	{
+		return Direction != Direction || FireToggle != FireToggle;
+	}
+};
+
 /**
- * 
+ * Shot type of instant hit shots.
  */
-UCLASS()
+UCLASS(Abstract)
 class BATTLESTAGE_API UBSInstantShot : public UBSShotType
 {
 	GENERATED_BODY()
 	
 public:
-	virtual void FireShot() override;
+	/** UBSShotType interface */
+	virtual bool GetShotData(FShotData& OutShotData) const override;
+	virtual void PreInvokeShot(const FShotData& ShotData) override;
+	virtual void InvokeShot(const FShotData& ShotData) override;
+	/** UBSShotType interface end */
+
+	/** UObject interface */
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty> & OutLifetimeProps) const override;
+	/** UObject interface end */
 
 protected:
-	virtual void PlayFireEffects();
+	void PlayTrailEffects(const FVector& Start, const FVector& End) const;
+
+	void PlayImpactEffects(const FHitResult& Hit) const;
+
+	void ProcessHit(const FShotData& ShotData);
+
+	void ProcessMiss(const FShotData& ShotData);
+
+	void RespondValidHit(const FShotData& ShotData);
+
+	void SimulateFire(const FVector& Direction) const;
+
+	FHitResult WeaponTrace(const FVector& Start, const FVector& End) const;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = ProjectileShot)
-	TSubclassOf<class ABSImpactEffect> ImpactEffect = nullptr;
+	TSubclassOf<class UBSImpactEffect> ImpactEffect = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = ProjectileShot)
 	UParticleSystem* TrailFX = nullptr;
@@ -35,4 +77,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = ProjectileShot)
 	float BaseDamage = 1.f;
+
+private:
+	UPROPERTY(Transient, ReplicatedUsing = OnRep_ShotRep)
+	FInstantShotRep ShotRep;
+
+private:
+	UFUNCTION()
+	void OnRep_ShotRep();
 };

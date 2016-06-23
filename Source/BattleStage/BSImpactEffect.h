@@ -2,25 +2,25 @@
 
 #pragma once
 
-#include "GameFramework/Actor.h"
+#include "UObject.h"
 #include "BSTypes.h"
-
 
 #include "BSImpactEffect.generated.h"
 
-UCLASS()
-class BATTLESTAGE_API ABSImpactEffect : public AActor
+UCLASS(Blueprintable, NotPlaceable, Config = Game)
+class BATTLESTAGE_API UBSImpactEffect : public UObject
 {
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
-	ABSImpactEffect();
+	UFUNCTION(BlueprintCallable, Category = ImpactEffect)
+	virtual void SpawnEffect(UWorld* World, const FHitResult& Hit) const;
 
-	/** AActor interface */
-	virtual void PostInitializeComponents() override;
-	/** AActor interface end */
+	/** UObject interface */
+	virtual void BeginDestroy() override;
+	/** UObject interface end*/
 
+protected:
 	UPROPERTY(EditDefaultsOnly, Category = Impact)
 	class USoundBase* ImpactSound = nullptr;
 
@@ -29,7 +29,4 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = Impact)
 	FDecalInfo DecalInfo;
-
-	UPROPERTY(BlueprintReadOnly, Category = Impact)
-	FHitResult SurfaceHit;
 };

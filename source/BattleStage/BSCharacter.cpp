@@ -27,6 +27,7 @@ ABSCharacter::ABSCharacter()
 	FirstPersonMesh->SetupAttachment(FirstPersonCamera);
 	FirstPersonMesh->SetCastShadow(false);
 	FirstPersonMesh->bOnlyOwnerSee = true;
+	FirstPersonMesh->bReceivesDecals = false;
 	FirstPersonMesh->RelativeRotation = FRotator{ -3.3f, -107.75f, -4.88f };
 	FirstPersonMesh->RelativeLocation = FVector{ 10.22f, 22.63f, -157.02f };
 
@@ -35,6 +36,7 @@ ABSCharacter::ABSCharacter()
 	USkeletalMeshComponent* Mesh = GetMesh();
 	Mesh->SetupAttachment(GetCapsuleComponent());
 	Mesh->bOwnerNoSee = true;
+	Mesh->bReceivesDecals = false;
 	Mesh->RelativeLocation = FVector{ 0.f, 0.f, -GetCapsuleComponent()->GetScaledCapsuleHalfHeight() };
 	Mesh->RelativeRotation = FRotator{ 0.f, -90.f, 0.f };
 }

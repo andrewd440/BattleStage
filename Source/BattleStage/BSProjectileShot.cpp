@@ -5,21 +5,19 @@
 #include "BSProjectile.h"
 #include "BSWeapon.h"
 
-void UBSProjectileShot::FireShot()
+bool UBSProjectileShot::GetShotData(FShotData& OutShotData) const
 {
-	ABSWeapon* const Weapon = GetWeapon();
-	const FVector Location = Weapon->GetFireLocation();
-	const FVector Direction = Weapon->GetFireRotation().Vector();
+	const ABSWeapon* const Weapon = GetWeapon();
+	OutShotData.Start = Weapon->GetFireLocation();
+	OutShotData.Direction = Weapon->GetFireRotation().Vector();
+	OutShotData.bImpactNeeded = false;
 
-	if (Weapon->HasAuthority())
-	{
-		SpawnProjectile(Location, Direction);
-		Weapon->NotifyFired();
-	}
-	else
-	{
-		ServerFireShot(Location, Direction);
-	}
+	return true;
+}
+
+void UBSProjectileShot::InvokeShot(const FShotData& ShotData)
+{
+	SpawnProjectile(ShotData.Start, ShotData.Direction);
 }
 
 void UBSProjectileShot::SpawnProjectile(FVector Location, FVector_NetQuantize Direction) const
@@ -27,22 +25,11 @@ void UBSProjectileShot::SpawnProjectile(FVector Location, FVector_NetQuantize Di
 	if (ProjectileType)
 	{
 		ABSWeapon* const Weapon = GetWeapon();
-		UWorld* World = Weapon->GetWorld();
 
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = Weapon;
 		SpawnParams.Instigator = Weapon->GetCharacter();
 
-		World->SpawnActor<ABSProjectile>(ProjectileType, Location, Direction.Rotation(), SpawnParams);
+		GetWorld()->SpawnActor<ABSProjectile>(ProjectileType, Location, Direction.Rotation(), SpawnParams);
 	}
-}
-
-void UBSProjectileShot::ServerFireShot_Implementation(FVector Location, FVector_NetQuantize Direction) const
-{
-	SpawnProjectile(Location, Direction);
-}
-
-bool UBSProjectileShot::ServerFireShot_Validate(FVector Location, FVector_NetQuantize Direction)
-{
-	return true;
 }

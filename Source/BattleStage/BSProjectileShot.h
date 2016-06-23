@@ -6,9 +6,9 @@
 #include "BSProjectileShot.generated.h"
 
 /**
- * 
+ * Shot type for projectile based shots.
  */
-UCLASS()
+UCLASS(Abstract)
 class BATTLESTAGE_API UBSProjectileShot : public UBSShotType
 {
 	GENERATED_BODY()
@@ -16,14 +16,12 @@ class BATTLESTAGE_API UBSProjectileShot : public UBSShotType
 public:
 
 	/** UBSShotType interface */
-	UFUNCTION(BlueprintCallable, Category = ProjectileShot)
-	virtual void FireShot() override;
+	virtual bool GetShotData(FShotData& OutShotData) const override;
+	virtual void InvokeShot(const FShotData& ShotData) override;
 	/** UBSShotType interface end */
 
 protected:
-	UFUNCTION(Server, Unreliable, WithValidation)
-	virtual void ServerFireShot(FVector Location, FVector_NetQuantize Direction) const;
-
+	/** Spawns a projectile of ProjectileType */
 	virtual void SpawnProjectile(FVector Location, FVector_NetQuantize Direction) const;
 
 protected:

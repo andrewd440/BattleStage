@@ -8,6 +8,7 @@
 #include "BSNetworkUtils.h"
 #include "BSShotType.h"
 #include "BSWeapon.h"
+#include "Engine/ActorChannel.h"
 
 ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -48,8 +49,25 @@ void ABSWeapon::PostInitProperties()
 
 	RemainingClip = WeaponFireData.ClipSize;
 	RemainingAmmo = WeaponFireData.MaxAmmo - RemainingClip;
+}
 
-	if (ShotTypeClass)
+bool ABSWeapon::ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
+{
+	bool bWroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+	
+	if (ShotType)
+	{
+		bWroteSomething |= Channel->ReplicateSubobject(ShotType, *Bunch, *RepFlags);
+	}
+
+	return bWroteSomething;
+}
+
+void ABSWeapon::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	if (HasAuthority())
 	{
 		ShotType = NewObject<UBSShotType>(this, ShotTypeClass, TEXT("ShotType"));
 	}
@@ -64,6 +82,7 @@ void ABSWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	DOREPLIFETIME(ABSWeapon, WeaponState); // Remotes need to play animations, etc.
 	DOREPLIFETIME_CONDITION(ABSWeapon, RemainingAmmo, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(ABSWeapon, RemainingClip, COND_OwnerOnly);
+	DOREPLIFETIME(ABSWeapon, ShotType);
 }
 
 // Called when the game starts or when spawned
@@ -118,13 +137,14 @@ void ABSWeapon::PlayFireEffects()
 {
 	if (MuzzleFX)
 	{
+		// #bstodo Implement looping FX behavior
 		if (MuzzleFXComponent)
 		{
 			MuzzleFXComponent->DeactivateSystem();
 			MuzzleFXComponent->DestroyComponent();
 		}
 
-		MuzzleFXComponent = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, GetActiveMesh(), MuzzleSocket);	
+		MuzzleFXComponent = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, GetActiveMesh(), MuzzleSocket);
 	}
 
 	if(FireSound)
@@ -283,9 +303,19 @@ void ABSWeapon::FireShot()
 		}
 		else
 		{
-			ShotType->FireShot();
-			PlayFireEffects();
-			LastFireTime = GetWorld()->GetTimeSeconds();
+			FShotData ShotData;
+			if (ShotType->GetShotData(ShotData))
+			{
+				ShotType->PreInvokeShot(ShotData);
+
+				// Invoke the actual shot on the server
+				ServerInvokeShot(ShotData);
+
+				if(GetNetMode() == NM_Client)
+					PlayFireEffects();
+
+				LastFireTime = GetWorld()->GetTimeSeconds();
+			}
 		}
 	}
 	else if (CanReload())
@@ -298,15 +328,34 @@ void ABSWeapon::FireShot()
 	}
 }
 
-void ABSWeapon::NotifyFired()
+void ABSWeapon::ServerInvokeShot_Implementation(const FShotData& ShotData)
 {
-	// #bstodo Check ammo and switch state?
-	RemainingClip--;
+	// Ensure the weapon can fire on the server. If not, force a state change.
+	if (CanFire())
+	{
+		ShotType->InvokeShot(ShotData);
 
-	bServerFired = !bServerFired;
+		// #bstodo Check ammo and switch state?
+		RemainingClip--;
 
-	if (GetNetMode() != NM_DedicatedServer)
-		OnRep_ServerFired();
+		bServerFired = !bServerFired;
+
+		if (GetNetMode() != NM_DedicatedServer)
+			OnRep_ServerFired();
+	}
+	else if (CanReload())
+	{
+		SetWeaponState(EWeaponState::Reloading);
+	}
+	else
+	{
+		SetWeaponState(EWeaponState::Active);
+	}
+}
+
+bool ABSWeapon::ServerInvokeShot_Validate(const FShotData& ShotData)
+{
+	return true;
 }
 
 void ABSWeapon::PlayBeginFireSequence()

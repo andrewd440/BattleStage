@@ -2,36 +2,43 @@
 
 #include "BattleStage.h"
 #include "BSImpactEffect.h"
+#include "Class.h"
 
-
-// Sets default values
-ABSImpactEffect::ABSImpactEffect()
+void UBSImpactEffect::SpawnEffect(UWorld* World, const FHitResult& Hit) const
 {
-	bReplicates = false;
-	InitialLifeSpan = 1.0f;
+	if (!World)
+	{
+		UE_LOG(BattleStage, Warning, TEXT("UBSImpactEffect::SpawnEffect World parameter is invalid."));
+	}
+	else
+	{
+		const FVector Location = Hit.ImpactPoint;
+		const FRotator Rotation = Hit.ImpactNormal.Rotation();
+
+		if (ImpactParticles)
+		{
+			UGameplayStatics::SpawnEmitterAtLocation(World, ImpactParticles, Location, Rotation);
+		}
+
+		if (ImpactSound)
+		{
+			UGameplayStatics::SpawnSoundAtLocation(World, ImpactSound, Location, Rotation);
+		}
+
+		if (DecalInfo.Material)
+		{
+			const FRotator DecalRotation = Rotation;
+
+			// #bstodo Apply random rotation to decal
+			UGameplayStatics::SpawnDecalAttached(DecalInfo.Material, DecalInfo.DecalSize, Hit.Component.Get(), Hit.BoneName,
+				Location, DecalRotation, EAttachLocation::KeepWorldPosition, DecalInfo.LifeSpan);
+		}
+	}
 }
 
-void ABSImpactEffect::PostInitializeComponents()
+void UBSImpactEffect::BeginDestroy()
 {
-	Super::PostInitializeComponents();
+	Super::BeginDestroy();
 
-	if (ImpactParticles)
-	{
-		UGameplayStatics::SpawnEmitterAttached(ImpactParticles, RootComponent);
-	}
-
-	if (ImpactSound)
-	{
-		UGameplayStatics::SpawnSoundAttached(ImpactSound, RootComponent);
-	}
-
-	if (DecalInfo.Material)
-	{
-		const FRotator DecalRotation = SurfaceHit.ImpactNormal.Rotation();
-
-		// #bstodo Apply random rotation to decal
-		UGameplayStatics::SpawnDecalAttached(DecalInfo.Material, DecalInfo.DecalSize, SurfaceHit.Component.Get(), SurfaceHit.BoneName,
-			SurfaceHit.ImpactPoint, DecalRotation, EAttachLocation::KeepWorldPosition, DecalInfo.LifeSpan);
-	}
+	UE_LOG(BattleStage, Warning, TEXT("UBSImpactEffect should not be instanced. Use DefaultObject instead."));
 }
-

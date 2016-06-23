@@ -41,10 +41,8 @@ void ABSProjectile::OnImpact(const FHitResult& Hit)
 	{
 		const FTransform SpawnTransform = GetTransform();
 
-		ABSImpactEffect* SpawnedEffect = GetWorld()->SpawnActorDeferred<ABSImpactEffect>(ImpactEffect, SpawnTransform, this);
-		SpawnedEffect->SurfaceHit = Hit;
-
-		UGameplayStatics::FinishSpawningActor(SpawnedEffect, SpawnTransform);
+		UBSImpactEffect* ImpactObject = ImpactEffect->GetDefaultObject<UBSImpactEffect>();
+		ImpactObject->SpawnEffect(GetWorld(), Hit);
 	}
 
 	if (HasAuthority())

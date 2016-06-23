@@ -32,7 +32,7 @@ public:
 protected:
 	// Effect generated at the surface of impact by the projectile
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Effects)
-	TSubclassOf<class ABSImpactEffect> ImpactEffect;
+	TSubclassOf<class UBSImpactEffect> ImpactEffect;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Damage)
 	FRadialDamageParams Damage;

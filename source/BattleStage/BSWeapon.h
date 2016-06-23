@@ -5,6 +5,7 @@
 #include "GameFramework/Actor.h"
 #include "BSProjectile.h"
 #include "BSCharacter.h"
+#include "BSShotType.h"
 #include "BSWeapon.generated.h"
 
 class ABSCharacter;
@@ -101,15 +102,10 @@ public:
 	UFUNCTION(BlueprintNativeEvent, Category = Weapon)
 	FVector GetFireLocation() const;
 
-	
-	/**
-	* Only called on the server. Notifies the weapon that a shot has been fired
-	* and to activate any unnecessary events.
-	*/
-	void NotifyFired();
-
 	/** AActor interface */
 	virtual void PostInitProperties() override;
+	virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
+	virtual void PostInitializeComponents() override;
 	/** AActor interface end */
 
 protected:
@@ -118,6 +114,13 @@ protected:
 
 	// Owning client only.
 	void FireShot();
+
+	/**
+	* Only called on the server. Notifies the weapon that a shot has been fired
+	* and to activate any unnecessary events.
+	*/
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerInvokeShot(const FShotData& ShotData);
 
 	/**
 	* Starts the equip sequence. Activates effects that should be played on clients, 
@@ -247,7 +250,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = WeaponData)
 	TSubclassOf<class UBSShotType> ShotTypeClass = nullptr;
 
-	UPROPERTY(VisibleAnywhere, Category = WeaponData)
+	UPROPERTY(VisibleAnywhere, Replicated, Category = WeaponData)
 	class UBSShotType* ShotType = nullptr;
 
 	// Timer used by this server to manage weapon state changes
