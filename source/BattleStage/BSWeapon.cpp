@@ -67,7 +67,7 @@ void ABSWeapon::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
-	if (HasAuthority())
+	if (HasAuthority() && ShotTypeClass)
 	{
 		ShotType = NewObject<UBSShotType>(this, ShotTypeClass, TEXT("ShotType"));
 	}
@@ -101,10 +101,7 @@ void ABSWeapon::ServerEquip_Implementation(ABSCharacter* Character)
 {
 	BSCharacter = Character;
 
-	// Attach MeshTP. Contolling clients will attach MeshFP on rep.
-	const FAttachmentTransformRules AttachRules{ EAttachmentRule::SnapToTarget, true };
-	const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
-	MeshTP->AttachToComponent(BSCharacter->GetThirdPersonMesh(), AttachRules, AttachSocket);
+
 
 	if (GetNetMode() != NM_DedicatedServer)
 		OnRep_BSCharacter();
@@ -457,6 +454,13 @@ void ABSWeapon::OnRep_BSCharacter()
 		const FAttachmentTransformRules AttachRules{ EAttachmentRule::SnapToTarget, true };
 		const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
 		MeshFP->AttachToComponent(BSCharacter->GetFirstPersonMesh(), AttachRules, AttachSocket);
+	}
+	else
+	{
+		// Attach MeshTP. Controlling clients will attach MeshFP on rep.
+		const FAttachmentTransformRules AttachRules(EAttachmentRule::SnapToTarget, true);
+		const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
+		MeshTP->AttachToComponent(BSCharacter->GetThirdPersonMesh(), AttachRules, AttachSocket);
 	}
 }
 

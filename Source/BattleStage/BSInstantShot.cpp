@@ -80,12 +80,12 @@ void UBSInstantShot::RespondValidHit(const FShotData& ShotData)
 
 	}
 
-	const FVector End = ShotData.Start + ShotData.Direction * MAX_SHOT_RANGE;
+	const FVector End = (ShotData.bImpactNeeded) ? ShotData.Impact.ImpactPoint : ShotData.Start + ShotData.Direction * MAX_SHOT_RANGE;
 
 	// Simulate on remotes
 	if (Weapon->HasAuthority())
 	{
-		ShotRep.Direction = (End - ShotData.Start).GetUnsafeNormal();
+		ShotRep.Target = End;
 		ShotRep.FireToggle = !ShotRep.FireToggle;
 	}
 
@@ -95,22 +95,21 @@ void UBSInstantShot::RespondValidHit(const FShotData& ShotData)
 		if(ShotData.bImpactNeeded)
 			PlayImpactEffects(ShotData.Impact);
 
-		PlayTrailEffects(ShotData.Start, End);
+		PlayTrailEffects(Weapon->GetFireLocation(), End);
 	}
 }
 
-void UBSInstantShot::SimulateFire(const FVector& Direction) const
+void UBSInstantShot::SimulateFire(const FVector& Target) const
 {
 	ABSWeapon* const Weapon = GetWeapon();
 
 	const FVector Start = Weapon->GetFireLocation();
-	const FVector End = Start + Direction * MAX_SHOT_RANGE;
-	FHitResult Impact = WeaponTrace(Start, End);
+	FHitResult Impact = WeaponTrace(Start, Target);
 
 	if (Impact.bBlockingHit)
 		PlayImpactEffects(Impact);
 
-	PlayTrailEffects(Start, End);
+	PlayTrailEffects(Start, Target);
 }
 
 FHitResult UBSInstantShot::WeaponTrace(const FVector& Start, const FVector& End) const
@@ -127,8 +126,7 @@ FHitResult UBSInstantShot::WeaponTrace(const FVector& Start, const FVector& End)
 
 void UBSInstantShot::OnRep_ShotRep()
 {
-	UE_LOG(BattleStage, Log, TEXT("Direction: %s"), *ShotRep.Direction.ToString());
-	SimulateFire(ShotRep.Direction);
+	SimulateFire(ShotRep.Target);
 }
 
 void UBSInstantShot::ProcessHit(const FShotData& ShotData)

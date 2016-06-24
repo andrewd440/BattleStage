@@ -12,19 +12,19 @@ struct FInstantShotRep
 	GENERATED_BODY()
 
 	UPROPERTY()
-	FVector_NetQuantizeNormal Direction = FVector::ForwardVector;
+	FVector_NetQuantize10 Target = FVector::ZeroVector;
 
 	UPROPERTY()
 	uint32 FireToggle : 1;
 
 	bool operator==(const FInstantShotRep& Other)
 	{
-		return Direction == Direction && FireToggle == FireToggle;
+		return Target == Target && FireToggle == FireToggle;
 	}
 
 	bool operator!=(const FInstantShotRep& Other)
 	{
-		return Direction != Direction || FireToggle != FireToggle;
+		return Target != Target || FireToggle != FireToggle;
 	}
 };
 
@@ -58,7 +58,7 @@ protected:
 
 	void RespondValidHit(const FShotData& ShotData);
 
-	void SimulateFire(const FVector& Direction) const;
+	void SimulateFire(const FVector& Target) const;
 
 	FHitResult WeaponTrace(const FVector& Start, const FVector& End) const;
 
