@@ -87,5 +87,9 @@ public:
 
 	/** Gets the name of the socket to attach equipped weapons. */
 	FORCEINLINE FName GetWeaponEquippedSocket() const { return WeaponEquippedSocket; }
+
+	/** Gets the currently equipped weapon. Null if no weapon is equipped. */
+	UFUNCTION(BlueprintCallable, Category = Mesh)
+	FORCEINLINE ABSWeapon* GetEquippedWeapon() const { return Weapon; }
 };
 

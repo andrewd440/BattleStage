@@ -40,5 +40,14 @@ void UBSImpactEffect::BeginDestroy()
 {
 	Super::BeginDestroy();
 
-	UE_LOG(BattleStage, Warning, TEXT("UBSImpactEffect should not be instanced. Use DefaultObject instead."));
+	if (GetWorld() != nullptr && GetWorld()->WorldType == EWorldType::Game)
+	{
+		if (GAreScreenMessagesEnabled)
+		{
+			GEngine->AddOnScreenDebugMessage((uint64)-1, 3.0f, FColor::Red, 
+				*FString::Printf(TEXT("UBSImpactEffect should not be spawned. Use SpawnEffect on default class. %s"), *GetName()));
+		}
+
+		UE_LOG(BattleStage, Warning, TEXT("UBSImpactEffect should not be instanced. Use DefaultObject instead."));
+	}	
 }

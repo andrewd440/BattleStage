@@ -71,4 +71,8 @@ protected:
 	//-----------------------------------------------------------------
 	// End AController Interface
 	//-----------------------------------------------------------------
+	
+public:
+	UFUNCTION(BlueprintCallable, Category = PlayerController)
+	FORCEINLINE ABSCharacter* GetBSCharacter() const { return BSCharacter; }
 };

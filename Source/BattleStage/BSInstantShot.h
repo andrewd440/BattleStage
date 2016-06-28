@@ -6,6 +6,10 @@
 #include "BSInstantShot.generated.h"
 
 
+//-----------------------------------------------------------------
+// Shot data used to replicate effects to remotes for 
+// UBSInstantShot
+//-----------------------------------------------------------------
 USTRUCT()
 struct FInstantShotRep
 {
@@ -52,14 +56,43 @@ protected:
 
 	void PlayImpactEffects(const FHitResult& Hit) const;
 
+
+	/**
+	* Processes a shot hit event from clients. Intended to only be called by the server to respond
+	* to a possible hit by a client shot trace. The hit will be validated and processed on the server.
+	* 
+	* @param ShotData	The shot data from the hit.
+	*/
 	void ProcessHit(const FShotData& ShotData);
 
+
+	/**
+	* Processes a shot miss event from clients. Intended to only be called by the server to respond
+	* to shot misses.
+	* 
+	* @param ShotData	The shot data from the invoked shot.
+	*/
 	void ProcessMiss(const FShotData& ShotData);
 
+
+	/**
+	* Responds to a verified hit on the server. Should be only called on the server. Applies any
+	* responses from a verified hit and notifies remotes of the hit.
+	* 
+	* @param ShotData	The shot data from the invoked shot.
+	*/
 	void RespondValidHit(const FShotData& ShotData);
 
+	
+	/**
+	* Simulates shot effects to a target location. Only plays visual and audible effects.
+	*/
 	void SimulateFire(const FVector& Target) const;
 
+
+	/**
+	* Performs a weapon trace from a start location to a end location.
+	*/
 	FHitResult WeaponTrace(const FVector& Start, const FVector& End) const;
 
 protected:
@@ -79,6 +112,7 @@ protected:
 	float BaseDamage = 1.f;
 
 private:
+	// Shot data used to replicate shot effects on remotes
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_ShotRep)
 	FInstantShotRep ShotRep;
 
