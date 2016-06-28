@@ -15,10 +15,14 @@ class BATTLESTAGE_API UBSProjectileShot : public UBSShotType
 	
 public:
 
-	/** UBSShotType interface */
+	//-----------------------------------------------------------------
+	// UBSShotType Interface
+	//-----------------------------------------------------------------
 	virtual bool GetShotData(FShotData& OutShotData) const override;
 	virtual void InvokeShot(const FShotData& ShotData) override;
-	/** UBSShotType interface end */
+	//-----------------------------------------------------------------
+	// UBSShotType Interface End 
+	//-----------------------------------------------------------------	
 
 protected:
 	/** Spawns a projectile of ProjectileType */

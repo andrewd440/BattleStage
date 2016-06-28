@@ -14,7 +14,7 @@ ABSProjectile::ABSProjectile()
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
 	CollisionComp->InitSphereRadius(5.0f);
 	CollisionComp->BodyInstance.SetCollisionProfileName("Projectile");
-
+	
 	// Players can't walk on it
 	CollisionComp->SetWalkableSlopeOverride(FWalkableSlopeOverride(WalkableSlope_Unwalkable, 0.f));
 	CollisionComp->CanCharacterStepUpOn = ECB_No;
@@ -47,11 +47,15 @@ void ABSProjectile::OnImpact(const FHitResult& Hit)
 
 	if (HasAuthority())
 	{
-		TArray<AActor*> ToIgnore;
-		ToIgnore.Add(this);
-
-		UGameplayStatics::ApplyRadialDamageWithFalloff(this, Damage.BaseDamage, Damage.MinimumDamage, GetActorLocation(), Damage.InnerRadius, Damage.OuterRadius, Damage.DamageFalloff, DamageTypeClass, ToIgnore);
+		UGameplayStatics::ApplyRadialDamageWithFalloff(this, Damage.BaseDamage, Damage.MinimumDamage, GetActorLocation(), Damage.InnerRadius, Damage.OuterRadius, Damage.DamageFalloff, DamageTypeClass, TArray<AActor*>{});
 
 		Destroy();
 	}
+}
+
+void ABSProjectile::PostActorCreated()
+{
+	// Make sure we don't hit the weapon or character firing
+	CollisionComp->IgnoreActorWhenMoving(GetOwner(), true);
+	CollisionComp->IgnoreActorWhenMoving(GetInstigator(), true);
 }

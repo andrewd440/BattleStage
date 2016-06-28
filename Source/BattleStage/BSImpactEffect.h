@@ -16,9 +16,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = ImpactEffect)
 	virtual void SpawnEffect(UWorld* World, const FHitResult& Hit) const;
 
-	/** UObject interface */
+	//-----------------------------------------------------------------
+	// UObject Interface 
+	//-----------------------------------------------------------------
 	virtual void BeginDestroy() override;
-	/** UObject interface end*/
+	//-----------------------------------------------------------------
+	// UObject Interface End
+	//-----------------------------------------------------------------
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = Impact)

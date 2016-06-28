@@ -29,6 +29,14 @@ public:
 	/** Returns ProjectileMovement subobject **/
 	FORCEINLINE class UProjectileMovementComponent* GetProjectileMovement() const { return ProjectileMovement; }
 
+	//-----------------------------------------------------------------
+	// AActor Interface 
+	//-----------------------------------------------------------------	
+	virtual void PostActorCreated() override;
+	//-----------------------------------------------------------------
+	// AActor Interface End 
+	//-----------------------------------------------------------------	
+
 protected:
 	// Effect generated at the surface of impact by the projectile
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Effects)

@@ -107,11 +107,15 @@ public:
 	*/
 	UFUNCTION(BlueprintCallable, Category = ShotType)
 	virtual void InvokeShot(const FShotData& ShotData) PURE_VIRTUAL(UBSShotType::InvokeShot, );
-
-	/** UObject interface */
+	
+	//-----------------------------------------------------------------
+	// UObject Interface
+	//-----------------------------------------------------------------		
 	virtual class UWorld* GetWorld() const override;
 	virtual bool IsSupportedForNetworking() const override;
-	/** UObject interface end */
+	//-----------------------------------------------------------------
+	// UObject Interface End
+	//-----------------------------------------------------------------	
 
 protected:
 
