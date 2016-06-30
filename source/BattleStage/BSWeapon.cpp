@@ -36,19 +36,22 @@ ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 	bCanBeDamaged = false;
 
 	// Default weapon fire data
-	WeaponFireData.MaxAmmo = 120;
-	WeaponFireData.ClipSize = 30;
-	WeaponFireData.FireRate = 0.1f;
-	WeaponFireData.ReloadSpeed = 2.0f;
-	WeaponFireData.bIsAuto = true;
+	WeaponStats.MaxAmmo = 120;
+	WeaponStats.ClipSize = 30;
+	WeaponStats.BaseDamage = 5.0f;
+	WeaponStats.FireRate = 0.1f;
+	WeaponStats.Spread = 5.0f;
+	WeaponStats.HipFireSpread = 5.0f;
+	WeaponStats.ReloadSpeed = 2.0f;
+	WeaponStats.bIsAuto = true;
 }
 
 void ABSWeapon::PostInitProperties()
 {
 	Super::PostInitProperties();
 
-	RemainingClip = WeaponFireData.ClipSize;
-	RemainingAmmo = WeaponFireData.MaxAmmo - RemainingClip;
+	RemainingClip = WeaponStats.ClipSize;
+	RemainingAmmo = WeaponStats.MaxAmmo - RemainingClip;
 }
 
 bool ABSWeapon::ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
@@ -101,10 +104,7 @@ void ABSWeapon::ServerEquip_Implementation(ABSCharacter* Character)
 {
 	BSCharacter = Character;
 
-
-
-	if (GetNetMode() != NM_DedicatedServer)
-		OnRep_BSCharacter();
+	OnRep_BSCharacter();
 
 	SetWeaponState(EWeaponState::Equipping);
 }
@@ -128,6 +128,11 @@ void ABSWeapon::StopFire()
 {
 	if(WeaponState != EWeaponState::Reloading)
 		SetWeaponState(EWeaponState::Active);
+}
+
+float ABSWeapon::GetCurrentSpread() const
+{
+	return WeaponStats.Spread + WeaponStats.HipFireSpread;
 }
 
 void ABSWeapon::PlayFireEffects()
@@ -280,9 +285,9 @@ void ABSWeapon::ClientEnteredFiringState_Implementation()
 {
 	// Use delay to prevent tap firing faster than the fire rate of the weapon.
 	const float CurrentTime = GetWorld()->GetTimeSeconds();
-	const float ShotDelay = FMath::Max(0.f, WeaponFireData.FireRate - (CurrentTime - LastFireTime));
+	const float ShotDelay = FMath::Max(0.f, WeaponStats.FireRate - (CurrentTime - LastFireTime));
 
-	GetWorldTimerManager().SetTimer(WeaponFiringTimer, this, &ABSWeapon::FireShot, WeaponFireData.FireRate, WeaponFireData.bIsAuto, ShotDelay);
+	GetWorldTimerManager().SetTimer(WeaponFiringTimer, this, &ABSWeapon::FireShot, WeaponStats.FireRate, WeaponStats.bIsAuto, ShotDelay);
 }
 
 void ABSWeapon::ClientExitFiringState_Implementation()
@@ -383,7 +388,7 @@ void ABSWeapon::OnEquipFinished()
 
 void ABSWeapon::OnReloadFinished()
 {
-	const int32 EmptySlots = WeaponFireData.ClipSize - RemainingClip;
+	const int32 EmptySlots = WeaponStats.ClipSize - RemainingClip;
 	const int32 RefillCount = FMath::Min(RemainingAmmo, EmptySlots);
 	RemainingClip += RefillCount;
 	RemainingAmmo -= RefillCount;
@@ -466,7 +471,7 @@ void ABSWeapon::OnRep_BSCharacter()
 
 FRotator ABSWeapon::GetFireRotation_Implementation() const
 {
-	return BSCharacter->GetViewRotation();
+	return BSCharacter->GetBaseAimRotation();
 }
 
 FVector ABSWeapon::GetFireLocation_Implementation() const
@@ -502,9 +507,9 @@ float ABSWeapon::PlayReloadSequence()
 {
 	if (ReloadAnim)
 	{
-		const float AnimLengthScale = ReloadAnim->CalculateSequenceLength() / WeaponFireData.ReloadSpeed;
+		const float AnimLengthScale = ReloadAnim->CalculateSequenceLength() / WeaponStats.ReloadSpeed;
 		const float AnimLength = BSCharacter->PlayAnimMontage(ReloadAnim, AnimLengthScale);
 	}
 
-	return WeaponFireData.ReloadSpeed;
+	return WeaponStats.ReloadSpeed;
 }

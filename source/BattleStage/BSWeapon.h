@@ -24,7 +24,7 @@ enum class EWeaponState
 };
 
 USTRUCT()
-struct FWeaponFireData
+struct FWeaponStats
 {
 	GENERATED_USTRUCT_BODY()
 
@@ -34,6 +34,9 @@ struct FWeaponFireData
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	int32 ClipSize;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float BaseDamage;
+
 	// Seconds betweens rounds
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float FireRate;
@@ -41,6 +44,15 @@ struct FWeaponFireData
 	// Reload time in seconds
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float ReloadSpeed;
+
+	// Angle, in degrees, of spread for the weapon. This is the max half cone angle that shots fired from
+	// this weapon will be directed.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(ClampMin = "0.0", ClampMax = "45.0", UIMin = "0.0", UIMax = "45.0"))
+	float Spread;
+
+	// Angle, in degrees, that will be added to Spread when firing from the hip.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "45.0", UIMin = "0.0", UIMax = "45.0"))
+	float HipFireSpread;
 
 	// If the weapon is fully automatic or single shot
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
@@ -84,7 +96,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	bool CanReload() const;
 
-
 	/**
 	* Get the character that owns this weapon.
 	*/
@@ -101,6 +112,9 @@ public:
 	*/
 	UFUNCTION(BlueprintNativeEvent, Category = Weapon)
 	FVector GetFireLocation() const;
+
+	UFUNCTION(BlueprintCallable, Category = Weapon)
+	float GetCurrentSpread() const;
 
 	/** AActor interface */
 	virtual void PostInitProperties() override;
@@ -235,6 +249,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	int32 GetRemainingClip() const { return RemainingClip; }
 
+	const FWeaponStats& GetWeaponStats() const { return WeaponStats; }
+
 protected:
 	// The previous weapon state. This is to be used with OnRep_WeaponState
 	// to respond to state changes on the client side. This should be set
@@ -244,7 +260,7 @@ protected:
 
 	// Common weapon firing data
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = WeaponData)
-	FWeaponFireData WeaponFireData;
+	FWeaponStats WeaponStats;
 
 	// The projectile class fired by this weapon
 	UPROPERTY(EditDefaultsOnly, Category = WeaponData)

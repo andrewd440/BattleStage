@@ -103,9 +103,42 @@ float ABSCharacter::PlayAnimMontage(class UAnimMontage* AnimMontage, float InPla
 	return Duration;
 }
 
-void ABSCharacter::PostInitializeComponents()
+bool ABSCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) const
 {
-	Super::PostInitializeComponents();
+	return CanDie() && Super::ShouldTakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
+}
+
+float ABSCharacter::TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	const float ActualDamage = Super::TakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
+
+	if (ActualDamage > 0)
+	{
+		Health -= ActualDamage;
+
+		UE_LOG(BattleStage, Log, TEXT("Character %s took %f damage"), *GetName(), ActualDamage);
+
+		if (Health <= 0)
+		{
+			Die(DamageEvent, EventInstigator, DamageCauser);
+		}
+		else
+		{
+			// #bstodo Implement hit event, non-dieing
+		}
+	}
+
+	return ActualDamage;
+}
+
+bool ABSCharacter::CanDie() const
+{
+	return Health > 0 && !IsPendingKill();
+}
+
+void ABSCharacter::Die(struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	// #bstodo Implement die event (ragdollies)
 }
 
 bool ABSCharacter::IsFirstPerson() const

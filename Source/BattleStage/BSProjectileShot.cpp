@@ -9,7 +9,16 @@ bool UBSProjectileShot::GetShotData(FShotData& OutShotData) const
 {
 	const ABSWeapon* const Weapon = GetWeapon();
 	OutShotData.Start = Weapon->GetFireLocation();
-	OutShotData.Direction = Weapon->GetFireRotation().Vector();
+
+	// Get a random weapon spread for the shot
+	const int32 RandomSeed = FMath::Rand();
+	FRandomStream SpreadStream(RandomSeed);
+	const float BaseSpread = FMath::DegreesToRadians(Weapon->GetCurrentSpread());
+
+	// Use spread to offset shot
+	const FVector TrueAimDirection = Weapon->GetFireRotation().Vector();
+	OutShotData.Direction = SpreadStream.VRandCone(TrueAimDirection, BaseSpread);
+
 	OutShotData.bImpactNeeded = false;
 
 	return true;

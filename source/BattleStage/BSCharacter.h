@@ -40,13 +40,30 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Mesh)
 	bool IsFirstPerson() const;
 
-	/** ACharacter interface */\
+	UFUNCTION(BlueprintCallable, Category = Health)
+	bool CanDie() const;
+
+	//-----------------------------------------------------------------
+	// ACharacter Interface
+	//-----------------------------------------------------------------	
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void Tick(float DeltaSeconds) override;
-	virtual void PostInitializeComponents() override;
-	/** ACharacter interface end */
+	//-----------------------------------------------------------------
+	// ACharacter Interface End
+	//-----------------------------------------------------------------	
 
-	/** AActor interface */
+	//-----------------------------------------------------------------
+	// APawn Interface
+	//-----------------------------------------------------------------
+	virtual float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+	virtual bool ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) const override;
+	//-----------------------------------------------------------------
+	// APawn Interface End
+	//-----------------------------------------------------------------	
+
+	//-----------------------------------------------------------------
+	// AActor Interface
+	//-----------------------------------------------------------------	
 	virtual void BeginPlay() override;
 
 	/** 
@@ -54,19 +71,23 @@ public:
 	 * this is a first person character, otherwise it will be played on the third person mesh.
 	 */
 	virtual float PlayAnimMontage(class UAnimMontage* AnimMontage, float InPlayRate = 1.f, FName StartSectionName = NAME_None) override;
-
-	/** AActor interface end*/
+	//-----------------------------------------------------------------
+	// AActor Interface End
+	//-----------------------------------------------------------------	
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Weapon)
 	TSubclassOf<ABSWeapon> DefaultWeaponClass = nullptr;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = Weapon)
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = Weapon)
 	ABSWeapon* Weapon = nullptr;
 
 	// Socket name to attach equipped weapons
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	FName WeaponEquippedSocket;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Health, Replicated)
+	int32 Health = 100;
 
 private:
 	UFUNCTION(BlueprintCallable, Category = Weapon)
@@ -74,6 +95,8 @@ private:
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerEquipWeapon();
+
+	void Die(struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser);
 
 public:
 	/** Returns FirstPersonCamera subobject **/

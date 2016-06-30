@@ -19,7 +19,15 @@ bool UBSInstantShot::GetShotData(FShotData& OutShotData) const
 {
 	const ABSWeapon* const Weapon = GetWeapon();
 	OutShotData.Start = Weapon->GetFireLocation();
-	OutShotData.Direction = Weapon->GetFireRotation().Vector();
+
+	// Get a random weapon spread for the shot
+	const int32 RandomSeed = FMath::Rand();
+	FRandomStream SpreadStream(RandomSeed);
+	const float BaseSpread = FMath::DegreesToRadians(Weapon->GetCurrentSpread());
+
+	// Use spread to offset shot
+	const FVector TrueAimDirection = Weapon->GetFireRotation().Vector();
+	OutShotData.Direction = SpreadStream.VRandCone(TrueAimDirection, BaseSpread);
 
 	const FVector FireEnd = OutShotData.Start + OutShotData.Direction * MAX_SHOT_RANGE;
 
@@ -74,17 +82,22 @@ void UBSInstantShot::RespondValidHit(const FShotData& ShotData)
 {
 	ABSWeapon* const Weapon = GetWeapon();
 
+	const FVector End = (ShotData.bImpactNeeded) ? ShotData.Impact.ImpactPoint : ShotData.Start + ShotData.Direction * MAX_SHOT_RANGE;
+
 	// #bstodo Do damage on server
 	if (Weapon->HasAuthority())
 	{
+		if (ShotData.bImpactNeeded && ShotData.Impact.Actor.IsValid())
+		{
+			AActor& HitActor = *ShotData.Impact.Actor;
 
-	}
+			const float BaseDamage = Weapon->GetWeaponStats().BaseDamage;
+			const FPointDamageEvent DamageEvent(BaseDamage, ShotData.Impact, -ShotData.Direction, DamageType);
 
-	const FVector End = (ShotData.bImpactNeeded) ? ShotData.Impact.ImpactPoint : ShotData.Start + ShotData.Direction * MAX_SHOT_RANGE;
+			HitActor.TakeDamage(BaseDamage, DamageEvent, Weapon->GetInstigatorController(), Weapon->GetCharacter());
+		}
 
-	// Simulate on remotes
-	if (Weapon->HasAuthority())
-	{
+		// Simulate on remotes
 		ShotRep.Target = End;
 		ShotRep.FireToggle = !ShotRep.FireToggle;
 	}
