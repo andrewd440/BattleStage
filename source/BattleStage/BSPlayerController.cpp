@@ -42,6 +42,7 @@ void ABSPlayerController::SetupInputComponent()
 
 	InputComponent->BindAction("Fire", IE_Pressed, this, &ABSPlayerController::OnStartFire);
 	InputComponent->BindAction("Fire", IE_Released, this, &ABSPlayerController::OnStopFire);
+	InputComponent->BindAction("Reload", IE_Pressed, this, &ABSPlayerController::OnReload);
 }
 
 void ABSPlayerController::ClientHearSound_Implementation(USoundBase* Sound, AActor* SourceActor, FVector_NetQuantize SoundLocation) const
@@ -113,5 +114,13 @@ void ABSPlayerController::OnStopFire()
 	if (BSCharacter)
 	{
 		BSCharacter->StopFire();
+	}
+}
+
+void ABSPlayerController::OnReload()
+{
+	if (BSCharacter)
+	{
+		BSCharacter->ReloadWeapon();
 	}
 }

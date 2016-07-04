@@ -49,6 +49,8 @@ protected:
 	/** Handles fire input */
 	void OnStopFire();
 
+	void OnReload();
+
 protected:
 	/* The base turn rate of the player **/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Controller)

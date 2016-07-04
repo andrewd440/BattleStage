@@ -24,8 +24,13 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	UFUNCTION(BlueprintCallable, Category = Character)
+	float GetAimSpread() const;
+
 	virtual void StartFire();
 	virtual void StopFire();
+
+	void ReloadWeapon();
 
 	/**
 	* Returns the dominate mesh used for this character. Will be the first person mesh

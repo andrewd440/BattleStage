@@ -18,7 +18,7 @@ void UBSInstantShot::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty> 
 bool UBSInstantShot::GetShotData(FShotData& OutShotData) const
 {
 	const ABSWeapon* const Weapon = GetWeapon();
-	OutShotData.Start = Weapon->GetFireLocation();
+	OutShotData.Start = Weapon->GetCameraAimLocation();
 
 	// Get a random weapon spread for the shot
 	const int32 RandomSeed = FMath::Rand();

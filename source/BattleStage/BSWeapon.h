@@ -48,11 +48,13 @@ struct FWeaponStats
 	// Angle, in degrees, of spread for the weapon. This is the max half cone angle that shots fired from
 	// this weapon will be directed.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(ClampMin = "0.0", ClampMax = "45.0", UIMin = "0.0", UIMax = "45.0"))
-	float Spread;
+	float BaseSpread;
 
-	// Angle, in degrees, that will be added to Spread when firing from the hip.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "45.0", UIMin = "0.0", UIMax = "45.0"))
-	float HipFireSpread;
+	float SpreadIncrementStanding;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "45.0", UIMin = "0.0", UIMax = "45.0"))
+	float SpreadIncrementMoving;
 
 	// If the weapon is fully automatic or single shot
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
@@ -96,6 +98,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	bool CanReload() const;
 
+	UFUNCTION(BlueprintCallable, Category = Weapon)
+	void Reload();
+
 	/**
 	* Get the character that owns this weapon.
 	*/
@@ -112,6 +117,9 @@ public:
 	*/
 	UFUNCTION(BlueprintNativeEvent, Category = Weapon)
 	FVector GetFireLocation() const;
+
+	UFUNCTION(BlueprintCallable, Category = Weapon)
+	FVector GetCameraAimLocation() const;
 
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	float GetCurrentSpread() const;

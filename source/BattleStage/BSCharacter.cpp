@@ -48,6 +48,14 @@ void ABSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(ABSCharacter, Weapon);
 }
 
+float ABSCharacter::GetAimSpread() const
+{
+	if (Weapon)
+		return Weapon->GetCurrentSpread();
+
+	return 0.f;
+}
+
 void ABSCharacter::StartFire()
 {
 	if (Weapon)
@@ -62,6 +70,12 @@ void ABSCharacter::StopFire()
 	{
 		Weapon->StopFire();
 	}
+}
+
+void ABSCharacter::ReloadWeapon()
+{
+	if (Weapon)
+		Weapon->Reload();
 }
 
 USkeletalMeshComponent* ABSCharacter::GetActiveMesh() const

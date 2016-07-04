@@ -40,8 +40,9 @@ ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 	WeaponStats.ClipSize = 30;
 	WeaponStats.BaseDamage = 5.0f;
 	WeaponStats.FireRate = 0.1f;
-	WeaponStats.Spread = 5.0f;
-	WeaponStats.HipFireSpread = 5.0f;
+	WeaponStats.BaseSpread = 2.0f;
+	WeaponStats.SpreadIncrementStanding = 1.0f;
+	WeaponStats.SpreadIncrementMoving = 1.0f;
 	WeaponStats.ReloadSpeed = 2.0f;
 	WeaponStats.bIsAuto = true;
 }
@@ -132,7 +133,9 @@ void ABSWeapon::StopFire()
 
 float ABSWeapon::GetCurrentSpread() const
 {
-	return WeaponStats.Spread + WeaponStats.HipFireSpread;
+	const float SpreadMod = BSCharacter->GetVelocity().Size() / BSCharacter->GetMovementComponent()->GetMaxSpeed() * WeaponStats.SpreadIncrementMoving;
+
+	return WeaponStats.BaseSpread + SpreadMod;
 }
 
 void ABSWeapon::PlayFireEffects()
@@ -337,7 +340,6 @@ void ABSWeapon::ServerInvokeShot_Implementation(const FShotData& ShotData)
 	{
 		ShotType->InvokeShot(ShotData);
 
-		// #bstodo Check ammo and switch state?
 		RemainingClip--;
 
 		bServerFired = !bServerFired;
@@ -417,10 +419,16 @@ bool ABSWeapon::CanReload() const
 {
 	if (WeaponState == EWeaponState::Firing || WeaponState == EWeaponState::Active || WeaponState == EWeaponState::Reloading)
 	{
-		return RemainingAmmo > 0;
+		return RemainingClip < WeaponStats.ClipSize && RemainingAmmo > 0;
 	}
 
 	return false;
+}
+
+void ABSWeapon::Reload()
+{
+	if (CanReload())
+		SetWeaponState(EWeaponState::Reloading);
 }
 
 void ABSWeapon::OnRep_ServerFired()
@@ -460,13 +468,12 @@ void ABSWeapon::OnRep_BSCharacter()
 		const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
 		MeshFP->AttachToComponent(BSCharacter->GetFirstPersonMesh(), AttachRules, AttachSocket);
 	}
-	else
-	{
-		// Attach MeshTP. Controlling clients will attach MeshFP on rep.
-		const FAttachmentTransformRules AttachRules(EAttachmentRule::SnapToTarget, true);
-		const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
-		MeshTP->AttachToComponent(BSCharacter->GetThirdPersonMesh(), AttachRules, AttachSocket);
-	}
+	
+	// Attach MeshTP. Controlling clients will attach MeshFP on rep.
+	const FAttachmentTransformRules AttachRules(EAttachmentRule::SnapToTarget, true);
+	const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
+	MeshTP->AttachToComponent(BSCharacter->GetThirdPersonMesh(), AttachRules, AttachSocket);
+	
 }
 
 FRotator ABSWeapon::GetFireRotation_Implementation() const
@@ -477,6 +484,30 @@ FRotator ABSWeapon::GetFireRotation_Implementation() const
 FVector ABSWeapon::GetFireLocation_Implementation() const
 {
 	return GetActiveMesh()->GetSocketLocation(MuzzleSocket);
+}
+
+FVector ABSWeapon::GetCameraAimLocation() const
+{
+	FVector AimLocation(ForceInitToZero);
+
+	if (BSCharacter->IsFirstPerson())
+	{	
+		APlayerController* PlayerController = static_cast<APlayerController*>(BSCharacter->GetController());
+		
+		FRotator DisgardRotator{};
+		PlayerController->GetPlayerViewPoint(AimLocation, DisgardRotator);
+		
+		// Move the aim location to the distance of the muzzle from the players view.
+		const FVector MuzzleOffset = GetFireLocation() - AimLocation;
+		const FVector AimDirection = GetFireRotation().Vector();
+		AimLocation += FVector::DotProduct(MuzzleOffset, AimDirection) * AimDirection;
+	}
+	else
+	{
+		AimLocation = GetFireLocation();
+	}
+
+	return AimLocation;
 }
 
 float ABSWeapon::PlayEquipSequence()
