@@ -133,27 +133,35 @@ void ABSWeapon::StopFire()
 
 float ABSWeapon::GetCurrentSpread() const
 {
-	const float SpreadMod = BSCharacter->GetVelocity().Size() / BSCharacter->GetMovementComponent()->GetMaxSpeed() * WeaponStats.SpreadIncrementMoving;
+	// Get spread factor based on movement
+	const float MovementFactor = BSCharacter->GetVelocity().Size() / BSCharacter->GetMovementComponent()->GetMaxSpeed();
+	const float MovementSpread = MovementFactor * WeaponStats.SpreadIncrementMoving;
 
-	return WeaponStats.BaseSpread + SpreadMod;
+	// Get spread factor based on crouch/standing
+	const float StandingSpread = BSCharacter->bIsCrouched ? 0.f : WeaponStats.SpreadIncrementStanding;
+
+	return WeaponStats.BaseSpread + MovementSpread + StandingSpread;
 }
 
 void ABSWeapon::PlayFireEffects()
 {
-	if (MuzzleFX)
+	if (MuzzleFX && (!MuzzleFX->IsLooping() || !MuzzleFXComponent))
 	{
-		// #bstodo Implement looping FX behavior
-		if (MuzzleFXComponent)
+		if (!MuzzleFXComponent)
 		{
-			MuzzleFXComponent->DeactivateSystem();
-			MuzzleFXComponent->DestroyComponent();
-		}
+			MuzzleFXComponent = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, GetActiveMesh(), MuzzleSocket);
+		}			
 
-		MuzzleFXComponent = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, GetActiveMesh(), MuzzleSocket);
+		MuzzleFXComponent->Activate(true);
 	}
 
-	if(FireSound)
-		UGameplayStatics::SpawnSoundAttached(FireSound, GetActiveMesh(), MuzzleSocket);
+	if (FireSound && (!FireSound->IsLooping() || !FireSoundComponent))
+	{
+		if(!FireSoundComponent)
+			FireSoundComponent = UGameplayStatics::SpawnSoundAttached(FireSound, GetActiveMesh(), MuzzleSocket);
+		
+		FireSoundComponent->Play();
+	}
 
 	if (FireAnim)
 		BSCharacter->PlayAnimMontage(FireAnim);
@@ -375,6 +383,13 @@ void ABSWeapon::PlayEndFireSequence()
 	if (MuzzleFXComponent)
 	{
 		MuzzleFXComponent->DeactivateSystem();
+		MuzzleFXComponent = nullptr;
+	}
+
+	if (FireSoundComponent)
+	{
+		FireSoundComponent->FadeOut(0.1f, 0.0f);
+		FireSoundComponent = nullptr;
 	}
 
 	if (EndFireSound)

@@ -289,6 +289,12 @@ protected:
 	float LastFireTime = 0.f;
 
 private:
+	// Toggle flag that indicates that the server fired a shot when changed.
+	// Should not be interpreted as true/false.
+	UPROPERTY(ReplicatedUsing = OnRep_ServerFired)
+	uint32 bServerFired : 1;
+
+private:
 	// Current state of the weapon
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_WeaponState, Category = WeaponData, meta = (AllowPrivateAccess = "true"))
 	TEnumAsByte<EWeaponState> WeaponState = EWeaponState::Inactive;
@@ -313,6 +319,10 @@ protected:
 	// Sound effect when the weapon is fire
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Sound)
 	USoundBase* FireSound = nullptr;
+
+	// Spawned component used to play FireSound and manipulate looping sounds.
+	UPROPERTY(Transient)
+	UAudioComponent* FireSoundComponent = nullptr;
 
 	// Sound effect on weapon end fire
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Sound)
@@ -358,12 +368,6 @@ protected:
 	* and sounds.
 	*/
 	virtual void PlayFireEffects();
-
-private:
-	// Toggle flag that indicates that the server fired a shot when changed.
-	// Should not be interpreted as true/false.
-	UPROPERTY(ReplicatedUsing=OnRep_ServerFired)
-	uint32 bServerFired:1;
 
 private:
 
