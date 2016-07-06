@@ -46,6 +46,7 @@ void ABSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ABSCharacter, Weapon);
+	DOREPLIFETIME(ABSCharacter, bIsDying);
 }
 
 float ABSCharacter::GetAimSpread() const
@@ -130,15 +131,13 @@ float ABSCharacter::TakeDamage(float Damage, struct FDamageEvent const& DamageEv
 	{
 		Health -= ActualDamage;
 
-		UE_LOG(BattleStage, Log, TEXT("Character %s took %f damage"), *GetName(), ActualDamage);
-
 		if (Health <= 0)
 		{
 			Die(DamageEvent, EventInstigator, DamageCauser);
 		}
 		else
 		{
-			// #bstodo Implement hit event, non-dieing
+			// #bstodo Implement hit event, non-dying
 		}
 	}
 
@@ -152,12 +151,96 @@ bool ABSCharacter::CanDie() const
 
 void ABSCharacter::Die(struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	// #bstodo Implement die event (ragdollies)
+	bIsDying = true;
+	bReplicateMovement = false;
+	bTearOff = true;
+
+	// #bstodo Must detach equipped weapon and destroy loadout
+
+	// Detach controller, character will be destroyed soon
+	DetachFromControllerPendingDestroy();
+
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		UpdateMeshVisibility();
+
+		OnDeath();
+	}
+}
+
+void ABSCharacter::OnRep_IsDying()
+{
+	UpdateMeshVisibility();
+
+	OnDeath();
+}
+
+void ABSCharacter::OnDeath_Implementation()
+{
+	// Stop any existing montages
+	StopAnimMontage();
+
+	// Set collision properties
+	static FName RagdollProfile{ TEXT("Ragdoll") };
+	GetMesh()->SetCollisionProfileName(RagdollProfile);
+
+	SetActorEnableCollision(true);
+
+	static FName NoCollisionProfile{ TEXT("NoCollision") };
+	GetCapsuleComponent()->SetCollisionProfileName(NoCollisionProfile);
+
+	// Play optional death anim and then active ragdoll
+	if (DeathAnim)
+	{
+		const float DeathAnimLength = PlayAnimMontage(DeathAnim);
+		
+		// Activate ragdoll after death anim
+		FOnMontageBlendingOutStarted RagdollStart;
+		RagdollStart.BindUObject(this, &ABSCharacter::OnDeathAnimEnded);
+		GetMesh()->GetAnimInstance()->Montage_SetBlendingOutDelegate(RagdollStart);
+	}
+	else
+	{
+		EnableRagdollPhysics();
+	}	
+}
+
+void ABSCharacter::OnDeathAnimEnded(UAnimMontage*, bool)
+{
+	EnableRagdollPhysics();
+}
+
+void ABSCharacter::EnableRagdollPhysics()
+{
+	if (GetMesh()->GetPhysicsAsset())
+	{
+		// Set all bodies of the mesh component to simulate
+		GetMesh()->SetAllBodiesSimulatePhysics(true);
+		GetMesh()->SetSimulatePhysics(true);
+		GetMesh()->WakeAllRigidBodies();
+
+		GetMesh()->bBlendPhysics = true;
+	}
+
+	// Stop and disable any character movement
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->SetComponentTickEnabled(false);
+
+	SetLifeSpan(10.0f);
 }
 
 bool ABSCharacter::IsFirstPerson() const
 {
-	return IsLocallyControlled();
+	return !bIsDying && IsLocallyControlled();
+}
+
+void ABSCharacter::UpdateMeshVisibility()
+{
+	const bool bFirstPerson = IsFirstPerson();
+
+	GetMesh()->SetOwnerNoSee(!bFirstPerson);
+	FirstPersonMesh->SetVisibility(bFirstPerson);
 }
 
 void ABSCharacter::PossessedBy(AController* NewController)

@@ -45,6 +45,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Mesh)
 	bool IsFirstPerson() const;
 
+	void UpdateMeshVisibility();
+
 	UFUNCTION(BlueprintCallable, Category = Health)
 	bool CanDie() const;
 
@@ -81,6 +83,16 @@ public:
 	//-----------------------------------------------------------------	
 
 protected:
+	/**
+	* Event hook for when the character dies. Base implementation plays any dying animations 
+	* and sets the character mesh to ragdoll.
+	*/
+	UFUNCTION(BlueprintNativeEvent, Category = Character)
+	void OnDeath();
+
+	void EnableRagdollPhysics();
+
+protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Weapon)
 	TSubclassOf<ABSWeapon> DefaultWeaponClass = nullptr;
 
@@ -94,6 +106,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Health, Replicated)
 	int32 Health = 100;
 
+	UPROPERTY(ReplicatedUsing=OnRep_IsDying)
+	bool bIsDying = false;
+
+	//-----------------------------------------------------------------
+	// Animations
+	//-----------------------------------------------------------------
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Character)
+	UAnimMontage* DeathAnim = nullptr;
+
 private:
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	void EquipWeapon();
@@ -101,7 +122,23 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerEquipWeapon();
 
+	void OnDeathAnimEnded(UAnimMontage* Montage, bool bInterupted);
+
+
+	/**
+	* Server only.
+	* Kills the character. Sets the character up to be killed and removes replication.
+	* First person characters will be switch to third person and controllers detached.
+	* 
+	* @param DamageEvent		The damage event the killed the character.
+	* @param EventInstigator	The event instigator.
+	* @param DamageCauser		The damage causer.
+	*/
 	void Die(struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser);
+
+private:
+	UFUNCTION()
+	void OnRep_IsDying();
 
 public:
 	/** Returns FirstPersonCamera subobject **/
