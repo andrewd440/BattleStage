@@ -127,17 +127,15 @@ float ABSCharacter::TakeDamage(float Damage, struct FDamageEvent const& DamageEv
 {
 	const float ActualDamage = Super::TakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
 
+	TakeHit(ActualDamage, DamageEvent, EventInstigator, DamageCauser);
+
 	if (ActualDamage > 0)
 	{
 		Health -= ActualDamage;
 
 		if (Health <= 0)
 		{
-			Die(DamageEvent, EventInstigator, DamageCauser);
-		}
-		else
-		{
-			// #bstodo Implement hit event, non-dying
+			Die(DamageEvent);
 		}
 	}
 
@@ -149,7 +147,7 @@ bool ABSCharacter::CanDie() const
 	return Health > 0 && !IsPendingKill();
 }
 
-void ABSCharacter::Die(struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+void ABSCharacter::Die(FDamageEvent const& DamageEvent)
 {
 	bIsDying = true;
 	bReplicateMovement = false;
@@ -173,6 +171,37 @@ void ABSCharacter::OnRep_IsDying()
 	UpdateMeshVisibility();
 
 	OnDeath();
+}
+
+void ABSCharacter::TakeHit(const float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	SetRecieveHitInfo(Damage, DamageEvent);
+
+	ApplyDamageMomentum(Damage, DamageEvent, nullptr, DamageCauser);
+	
+	OnRecieveHit();
+}
+
+void ABSCharacter::SetRecieveHitInfo(const float Damage, FDamageEvent const& DamageEvent)
+{
+	// Set direction based on damage event type
+	if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
+	{
+		const FPointDamageEvent& PointDamageEvent = static_cast<const FPointDamageEvent&>(DamageEvent);
+		ReceiveHitInfo.Direction = PointDamageEvent.ShotDirection;
+	}
+	else if (DamageEvent.IsOfType(FRadialDamageEvent::ClassID))
+	{
+		const FRadialDamageEvent& RadialDamageEvent = static_cast<const FRadialDamageEvent&>(DamageEvent);
+		ReceiveHitInfo.Direction = (RadialDamageEvent.Origin - GetActorLocation()).GetSafeNormal();
+	}
+
+	ReceiveHitInfo.Damage = Damage;
+}
+
+void ABSCharacter::OnRecieveHit_Implementation()
+{
+
 }
 
 void ABSCharacter::OnDeath_Implementation()

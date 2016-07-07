@@ -448,7 +448,11 @@ void ABSWeapon::Reload()
 
 void ABSWeapon::OnRep_ServerFired()
 {
-	PlayFireEffects();
+	// Make sure we are still firing to prevent incorrect behavior
+	// from replication order when ServerFired and WeaponState are changed
+	// at the same time.
+	if(WeaponState == EWeaponState::Firing)
+		PlayFireEffects();
 }
 
 void ABSWeapon::OnRep_WeaponState()

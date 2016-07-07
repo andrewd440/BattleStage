@@ -6,6 +6,19 @@
 class UInputComponent;
 class ABSWeapon;
 
+USTRUCT()
+struct FReceiveHitInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	float Damage;
+
+	/** Direction the hit came from. */
+	UPROPERTY()
+	FVector_NetQuantizeNormal Direction;
+};
+
 UCLASS(config=Game)
 class ABSCharacter : public ACharacter
 {
@@ -84,11 +97,18 @@ public:
 
 protected:
 	/**
-	* Event hook for when the character dies. Base implementation plays any dying animations 
+	* Called when the character dies. Base implementation plays any dying animations 
 	* and sets the character mesh to ragdoll.
 	*/
 	UFUNCTION(BlueprintNativeEvent, Category = Character)
 	void OnDeath();
+
+	/**
+	* Called when the player is hit by a damage event, i.e. bullet, projectile, explosion, etc.
+	* Responds to hit event using data in ReceiveHitInfo.
+	*/
+	UFUNCTION(BlueprintNativeEvent, Category = Character)
+	void OnRecieveHit();
 
 	void EnableRagdollPhysics();
 
@@ -106,8 +126,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Health, Replicated)
 	int32 Health = 100;
 
-	UPROPERTY(ReplicatedUsing=OnRep_IsDying)
+	UPROPERTY(ReplicatedUsing = OnRep_IsDying)
 	bool bIsDying = false;
+
+	UPROPERTY(BlueprintReadOnly, Transient, ReplicatedUsing = OnRecieveHit)
+	FReceiveHitInfo ReceiveHitInfo;
 
 	//-----------------------------------------------------------------
 	// Animations
@@ -124,7 +147,6 @@ private:
 
 	void OnDeathAnimEnded(UAnimMontage* Montage, bool bInterupted);
 
-
 	/**
 	* Server only.
 	* Kills the character. Sets the character up to be killed and removes replication.
@@ -134,11 +156,15 @@ private:
 	* @param EventInstigator	The event instigator.
 	* @param DamageCauser		The damage causer.
 	*/
-	void Die(struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser);
+	void Die(struct FDamageEvent const& DamageEvent);
+
+	void TakeHit(const float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser);
 
 private:
 	UFUNCTION()
 	void OnRep_IsDying();
+
+	void SetRecieveHitInfo(const float Damage, FDamageEvent const& DamageEvent);
 
 public:
 	/** Returns FirstPersonCamera subobject **/

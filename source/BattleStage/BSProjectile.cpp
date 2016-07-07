@@ -47,7 +47,10 @@ void ABSProjectile::OnImpact(const FHitResult& Hit)
 
 	if (HasAuthority())
 	{
-		UGameplayStatics::ApplyRadialDamageWithFalloff(this, Damage.BaseDamage, Damage.MinimumDamage, GetActorLocation(), Damage.InnerRadius, Damage.OuterRadius, Damage.DamageFalloff, DamageTypeClass, TArray<AActor*>{});
+		TArray<AActor*> ToIgnore;
+		ToIgnore.Add(this);
+
+		UGameplayStatics::ApplyRadialDamageWithFalloff(this, Damage.BaseDamage, Damage.MinimumDamage, GetActorLocation(), Damage.InnerRadius, Damage.OuterRadius, Damage.DamageFalloff, DamageTypeClass, ToIgnore);
 
 		Destroy();
 	}
