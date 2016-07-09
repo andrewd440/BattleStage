@@ -2,11 +2,11 @@
 
 #include "BattleStage.h"
 #include "BSCharacter.h"
-#include "BSProjectile.h"
+#include "Weapons/BSProjectile.h"
 #include "Animation/AnimInstance.h"
 #include "GameFramework/InputSettings.h"
 #include "MotionControllerComponent.h"
-#include "BSWeapon.h"
+#include "Weapons/BSWeapon.h"
 #include "UnrealNetwork.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);

@@ -3,7 +3,7 @@
 #include "BattleStage.h"
 #include "BSPlayerController.h"
 #include "BSCharacter.h"
-#include "BSWeapon.h"
+#include "Weapons/BSWeapon.h"
 
 ABSPlayerController::ABSPlayerController()
 	: Super()

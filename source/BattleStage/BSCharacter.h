@@ -6,6 +6,10 @@
 class UInputComponent;
 class ABSWeapon;
 
+//-----------------------------------------------------------------
+// Hit data sent to clients following a successful hit on the 
+// server.
+//-----------------------------------------------------------------
 USTRUCT()
 struct FReceiveHitInfo
 {
