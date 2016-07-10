@@ -14,6 +14,11 @@ ABSPlayerController::ABSPlayerController()
 
 }
 
+void ABSPlayerController::UnFreeze()
+{
+	ServerRestartPlayer();
+}
+
 void ABSPlayerController::SetPawn(APawn* InPawn)
 {
 	Super::SetPawn(InPawn);

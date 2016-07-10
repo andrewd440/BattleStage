@@ -5,6 +5,7 @@
 #include "BSCharacter.h"
 #include "BSPlayerController.h"
 #include "BSGameState.h"
+#include "BSPlayerState.h"
 
 DEFINE_LOG_CATEGORY_STATIC(BSGameMode, Warning, All);
 
@@ -13,6 +14,9 @@ ABSGameMode::ABSGameMode()
 {
 	TimeLimit = 15;
 	ScoreGoal = 20;
+
+	KillScore = 1;
+	DeathScore = 0;
 }
 
 void ABSGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
@@ -35,6 +39,7 @@ void ABSGameMode::InitGameState()
 	{
 		BSGameState->SetTimeLimit(TimeLimit);
 		BSGameState->SetGoalScore(ScoreGoal);
+		BSGameState->SetIsTeamGame(bIsTeamGame);
 	}
 	else
 	{
@@ -43,17 +48,54 @@ void ABSGameMode::InitGameState()
 	}
 }
 
-void ABSGameMode::ScoreKill(ABSPlayerState* Player, ABSPlayerState* Killed)
+void ABSGameMode::ScoreKill_Implementation(AController* Player, AController* Killed)
 {
+	ABSPlayerState* PlayerState = Cast<ABSPlayerState>(Player->PlayerState);
 
+	if (PlayerState)
+	{
+		if (Player == Killed)
+		{
+			// Suicide
+			PlayerState->ScoreDeath(PlayerState, DeathScore);
+		}
+		else if (Killed)
+		{
+			if (ABSPlayerState* KilledState = Cast<ABSPlayerState>(Killed->PlayerState))
+			{
+				PlayerState->ScoreKill(KilledState, KillScore);
+				KilledState->ScoreDeath(PlayerState, DeathScore);
+			}
+		}
+	}
+
+	CheckScore(PlayerState);
 }
 
-void ABSGameMode::ScoreDeath(ABSPlayerState* Player)
+void ABSGameMode::ScoreDeath_Implementation(AController* Player)
 {
-
+	if(ABSPlayerState* PlayerState = Cast<ABSPlayerState>(Player->PlayerState))
+	{
+		PlayerState->ScoreDeath(nullptr, DeathScore);
+	}
 }
 
 void ABSGameMode::CheckScore(ABSPlayerState* Player)
 {
 
+}
+
+FString ABSGameMode::InitNewPlayer(class APlayerController* NewPlayerController, const TSharedPtr<const FUniqueNetId>& UniqueId, const FString& Options, const FString& Portal /*= TEXT("")*/)
+{ 
+	FString ReturnString = Super::InitNewPlayer(NewPlayerController, UniqueId, Options, Portal);
+
+	//if (!bIsTeamGame)
+	//{
+	//	if (ABSPlayerState* PlayerState = Cast<ABSPlayerState>(NewPlayerController->PlayerState))
+	//	{
+	//		PlayerState->SetTeam(BSGameState-);
+	//	}
+	//}
+
+	return ReturnString;
 }

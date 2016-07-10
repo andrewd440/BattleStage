@@ -21,6 +21,9 @@ public:
 	UFUNCTION(Client, Unreliable)
 	virtual void ClientHearSound(USoundBase* Sound, AActor* SourceActor, const FVector_NetQuantize SoundLocation) const;
 
+	/** Respawn */
+	virtual void UnFreeze() override;
+
 protected:
 	/** Handles moving forward/backward */
 	void OnMoveForward(float Val);

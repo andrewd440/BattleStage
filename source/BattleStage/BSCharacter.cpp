@@ -8,6 +8,7 @@
 #include "MotionControllerComponent.h"
 #include "Weapons/BSWeapon.h"
 #include "UnrealNetwork.h"
+#include "GameModes/BSGameMode.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
@@ -135,7 +136,7 @@ float ABSCharacter::TakeDamage(float Damage, struct FDamageEvent const& DamageEv
 
 		if (Health <= 0)
 		{
-			Die(DamageEvent);
+			Die(DamageEvent, EventInstigator);
 		}
 	}
 
@@ -147,13 +148,17 @@ bool ABSCharacter::CanDie() const
 	return Health > 0 && !IsPendingKill();
 }
 
-void ABSCharacter::Die(FDamageEvent const& DamageEvent)
+void ABSCharacter::Die(FDamageEvent const& DamageEvent, AController* Killer)
 {
 	bIsDying = true;
 	bReplicateMovement = false;
 	bTearOff = true;
 
+	ABSGameMode* GameMode = Cast<ABSGameMode>(GetWorld()->GetAuthGameMode());
+	GameMode->ScoreKill(Killer, GetController());
+
 	// #bstodo Must detach equipped weapon and destroy loadout
+
 
 	// Detach controller, character will be destroyed soon
 	DetachFromControllerPendingDestroy();

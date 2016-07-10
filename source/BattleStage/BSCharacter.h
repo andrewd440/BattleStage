@@ -160,7 +160,7 @@ private:
 	* @param EventInstigator	The event instigator.
 	* @param DamageCauser		The damage causer.
 	*/
-	void Die(struct FDamageEvent const& DamageEvent);
+	void Die(struct FDamageEvent const& DamageEvent, AController* Killer);
 
 	void TakeHit(const float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser);
 

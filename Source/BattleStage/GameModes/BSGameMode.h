@@ -15,7 +15,7 @@ public:
 
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 
-	virtual void InitGameState() override;
+	virtual void InitGameState() override; 
 
 	/**
 	* Score a player kill.
@@ -23,13 +23,15 @@ public:
 	* @param Player	The player that got the kill.
 	* @param Killed	The player that was killed.
 	*/
-	void ScoreKill(ABSPlayerState* Player, ABSPlayerState* Killed);
+	UFUNCTION(BlueprintNativeEvent, Category = GameMode)
+	void ScoreKill(AController* Player, AController* Killed);
 	
 	/**
 	* Score a player death that wasn't directly caused by
 	* another player.
 	*/
-	void ScoreDeath(ABSPlayerState* Player);
+	UFUNCTION(BlueprintNativeEvent, Category = GameMode)
+	void ScoreDeath(AController* Player);
 
 protected:
 
@@ -40,6 +42,9 @@ protected:
 	* @param Player	The player that created the score event.
 	*/
 	virtual void CheckScore(ABSPlayerState* Player);
+
+
+	virtual FString InitNewPlayer(class APlayerController* NewPlayerController, const TSharedPtr<const FUniqueNetId>& UniqueId, const FString& Options, const FString& Portal = TEXT("")) override;
 
 protected:
 
@@ -59,8 +64,11 @@ protected:
 	UPROPERTY(config, EditDefaultsOnly, Category = GameMode)
 	int32 DeathScore;
 
+	UPROPERTY(EditDefaultsOnly, Category = GameMode)
+	uint32 bIsTeamGame : 1;
+
 private:
-	// Cast of GameState to BSGameState
+	// Cached cast of GameState to BSGameState
 	class ABSGameState* BSGameState;
 };
 
