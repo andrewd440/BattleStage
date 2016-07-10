@@ -40,6 +40,10 @@ ABSCharacter::ABSCharacter()
 	Mesh->bReceivesDecals = false;
 	Mesh->RelativeLocation = FVector{ 0.f, 0.f, -GetCapsuleComponent()->GetScaledCapsuleHalfHeight() };
 	Mesh->RelativeRotation = FRotator{ 0.f, -90.f, 0.f };
+
+	bIsDying = false;
+	Health = 100;
+	Weapon = nullptr;
 }
 
 void ABSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -282,6 +286,9 @@ void ABSCharacter::PossessedBy(AController* NewController)
 	Super::PossessedBy(NewController);
 
 	SetOwner(NewController);
+
+	if (Weapon)
+		Weapon->AttachToOwner();
 }
 
 void ABSCharacter::EquipWeapon()

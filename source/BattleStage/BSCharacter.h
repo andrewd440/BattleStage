@@ -121,17 +121,17 @@ protected:
 	TSubclassOf<ABSWeapon> DefaultWeaponClass = nullptr;
 
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = Weapon)
-	ABSWeapon* Weapon = nullptr;
+	ABSWeapon* Weapon;
 
 	// Socket name to attach equipped weapons
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	FName WeaponEquippedSocket;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Health, Replicated)
-	int32 Health = 100;
+	int32 Health;
 
 	UPROPERTY(ReplicatedUsing = OnRep_IsDying)
-	bool bIsDying = false;
+	bool bIsDying;
 
 	UPROPERTY(BlueprintReadOnly, Transient, ReplicatedUsing = OnRecieveHit)
 	FReceiveHitInfo ReceiveHitInfo;

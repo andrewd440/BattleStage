@@ -77,6 +77,10 @@ public:
 	// Called every frame
 	virtual void Tick( float DeltaSeconds ) override;
 
+	void AttachToOwner();
+
+	void DetachFromOwner();
+
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable, Category = Weapon)
 	virtual void ServerEquip(ABSCharacter* Character);
 

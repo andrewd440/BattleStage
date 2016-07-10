@@ -15,6 +15,7 @@ ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 	, MuzzleSocket(TEXT("MuzzleAttach"))
 	, ShotTypeClass(nullptr)
 {
+	// First person weapon mesh
 	MeshFP = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshFP"));
 	MeshFP->SetCollisionProfileName("CharacterMesh");
 	MeshFP->SetCastShadow(false);
@@ -23,7 +24,7 @@ ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 	MeshFP->bOnlyOwnerSee = true;
 	RootComponent = MeshFP;
 
-
+	// Third person weapon mesh
 	MeshTP = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshTP"));
 	MeshTP->SetCollisionProfileName("CharacterMesh");
 	MeshTP->SetCastShadow(true);
@@ -34,6 +35,7 @@ ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 
 	bReplicates = true;
 	bCanBeDamaged = false;
+	bNetUseOwnerRelevancy = true;
 
 	// Default weapon fire data
 	WeaponStats.MaxAmmo = 120;
@@ -101,11 +103,33 @@ void ABSWeapon::Tick( float DeltaTime )
 	Super::Tick( DeltaTime );
 }
 
+void ABSWeapon::AttachToOwner()
+{
+	// Rid of current attachments
+	DetachFromOwner();
+
+	const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
+	const FAttachmentTransformRules AttachRules{ EAttachmentRule::SnapToTarget, true };
+
+	USkeletalMeshComponent* const ActiveMesh = GetActiveMesh();
+	ActiveMesh->AttachToComponent(BSCharacter->GetActiveMesh(), AttachRules, AttachSocket);
+	ActiveMesh->SetHiddenInGame(false);
+}
+
+void ABSWeapon::DetachFromOwner()
+{
+	MeshFP->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	MeshFP->SetHiddenInGame(true);
+
+	MeshTP->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	MeshTP->SetHiddenInGame(true);
+}
+
 void ABSWeapon::ServerEquip_Implementation(ABSCharacter* Character)
 {
 	BSCharacter = Character;
 
-	OnRep_BSCharacter();
+	AttachToOwner();
 
 	SetWeaponState(EWeaponState::Equipping);
 }
@@ -481,18 +505,7 @@ void ABSWeapon::OnRep_WeaponState()
 
 void ABSWeapon::OnRep_BSCharacter()
 {
-	if (BSCharacter->IsFirstPerson())
-	{
-		const FAttachmentTransformRules AttachRules{ EAttachmentRule::SnapToTarget, true };
-		const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
-		MeshFP->AttachToComponent(BSCharacter->GetFirstPersonMesh(), AttachRules, AttachSocket);
-	}
-	
-	// Attach MeshTP. Controlling clients will attach MeshFP on rep.
-	const FAttachmentTransformRules AttachRules(EAttachmentRule::SnapToTarget, true);
-	const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
-	MeshTP->AttachToComponent(BSCharacter->GetThirdPersonMesh(), AttachRules, AttachSocket);
-	
+	AttachToOwner();
 }
 
 FRotator ABSWeapon::GetFireRotation_Implementation() const
