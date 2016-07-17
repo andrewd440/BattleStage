@@ -33,6 +33,8 @@ public:
 	UFUNCTION(BlueprintNativeEvent, Category = GameMode)
 	void ScoreDeath(AController* Player);
 
+	TSubclassOf<class AGameSession> GetGameSessionClass() const override;
+
 protected:
 
 	/**
@@ -45,6 +47,8 @@ protected:
 
 
 	virtual FString InitNewPlayer(class APlayerController* NewPlayerController, const TSharedPtr<const FUniqueNetId>& UniqueId, const FString& Options, const FString& Portal = TEXT("")) override;
+
+	bool ReadyToEndMatch_Implementation() override;
 
 protected:
 
@@ -66,6 +70,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = GameMode)
 	uint32 bIsTeamGame : 1;
+
+	// Will be assigned the match winner at the end of a non-team based game.
+	ABSPlayerState* WinningPlayer;
 
 private:
 	// Cached cast of GameState to BSGameState

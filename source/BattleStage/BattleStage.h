@@ -4,10 +4,12 @@
 #define __BATTLESTAGE_H__
 
 #include "Engine.h"
-#include "HeadMountedDisplay.h"
+#include "Net/UnrealNetwork.h"
+#include "GameModes/BSGameMode.h"
 
 
 DECLARE_LOG_CATEGORY_EXTERN(BattleStage, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(BattleStageOnline, Log, All);
 
 #define WEAPON_CHANNEL ECC_GameTraceChannel1
 

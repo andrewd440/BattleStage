@@ -3,6 +3,7 @@
 #include "BattleStage.h"
 
 DEFINE_LOG_CATEGORY(BattleStage);
+DEFINE_LOG_CATEGORY(BattleStageOnline);
 
 IMPLEMENT_PRIMARY_GAME_MODULE( FDefaultGameModuleImpl, BattleStage, "BattleStage" );
  

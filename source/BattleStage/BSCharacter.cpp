@@ -163,7 +163,6 @@ void ABSCharacter::Die(FDamageEvent const& DamageEvent, AController* Killer)
 
 	// #bstodo Must detach equipped weapon and destroy loadout
 
-
 	// Detach controller, character will be destroyed soon
 	DetachFromControllerPendingDestroy();
 

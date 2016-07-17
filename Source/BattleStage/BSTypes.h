@@ -21,3 +21,13 @@ struct FDecalInfo
 	UPROPERTY(EditDefaultsOnly)
 	float LifeSpan = 1.0f;
 };
+
+//-----------------------------------------------------------------
+// Keys used to parse/input travel url options. 
+//-----------------------------------------------------------------
+namespace TravelURLKeys
+{
+	static const FString MapNamePrefix = TEXT("Game/Maps/");
+	static const FString IsLanMatch = TEXT("bIsLanMatch");
+	static const FString GameType = TEXT("game");
+}

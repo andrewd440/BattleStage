@@ -5,7 +5,7 @@
 #include "UnrealNetwork.h"
 
 #include "BSCharacter.h"
-#include "BSNetworkUtils.h"
+#include "Online/BSNetworkUtils.h"
 #include "Weapons/BSShotType.h"
 #include "Weapons/BSWeapon.h"
 #include "Engine/ActorChannel.h"

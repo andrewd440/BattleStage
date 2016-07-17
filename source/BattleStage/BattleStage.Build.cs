@@ -6,9 +6,26 @@ public class BattleStage : ModuleRules
 {
 	public BattleStage(TargetInfo Target)
 	{
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
+		PublicDependencyModuleNames.AddRange(
+            new string[] {
+                "Core",
+                "CoreUObject",
+                "Engine",
+                "OnlineSubsystem",
+                "OnlineSubsystemUtils"
+            });
+    
+        PrivateDependencyModuleNames.AddRange(
+            new string[] {
+                "HeadMountedDisplay",
+                "InputCore",
+                "Slate",
+                "SlateCore"
+            });
 
-        /* VR Module */
-        PrivateDependencyModuleNames.AddRange(new string[] { "HeadMountedDisplay" });
+        DynamicallyLoadedModuleNames.AddRange(
+            new string[] {
+                "OnlineSubsystemNull"
+            });
     }
 }

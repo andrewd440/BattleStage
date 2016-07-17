@@ -24,6 +24,12 @@ public:
 	/** Respawn */
 	virtual void UnFreeze() override;
 
+	/** Set spectator cam looking at pawn */
+	virtual void PawnPendingDestroy(APawn* inPawn) override;
+
+	UFUNCTION(Reliable, Client)
+	void ClientSetSpectatorCamera(const FVector CameraLocation, const FRotator CameraRotation);
+
 protected:
 	/** Handles moving forward/backward */
 	void OnMoveForward(float Val);

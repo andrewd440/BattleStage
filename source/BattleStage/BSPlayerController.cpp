@@ -4,6 +4,7 @@
 #include "BSPlayerController.h"
 #include "BSCharacter.h"
 #include "Weapons/BSWeapon.h"
+#include "Camera/PlayerCameraManager.h"
 
 ABSPlayerController::ABSPlayerController()
 	: Super()
@@ -17,6 +18,25 @@ ABSPlayerController::ABSPlayerController()
 void ABSPlayerController::UnFreeze()
 {
 	ServerRestartPlayer();
+}
+
+void ABSPlayerController::PawnPendingDestroy(APawn* inPawn)
+{
+	APawn* const Pawn = GetPawn();
+	FVector DeathLocation = Pawn->GetActorLocation() + FVector{ 0, 0, 300 };
+	FRotator CameraRotation{ -90.f, 0, 0 };
+
+	// #bstodo Get better camera view and location
+
+	Super::PawnPendingDestroy(inPawn);
+
+	ClientSetSpectatorCamera(DeathLocation, CameraRotation);
+}
+
+void ABSPlayerController::ClientSetSpectatorCamera_Implementation(const FVector CameraLocation, const FRotator CameraRotation)
+{
+	SetInitialLocationAndRotation(CameraLocation, CameraRotation);
+	SetViewTarget(this);
 }
 
 void ABSPlayerController::SetPawn(APawn* InPawn)
