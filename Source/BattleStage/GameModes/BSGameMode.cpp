@@ -28,7 +28,7 @@ ABSGameMode::ABSGameMode()
 	static ConstructorHelpers::FClassFinder<APlayerController> PlayerControllerFinder(TEXT("/Game/Blueprints/BP_BSPlayerController"));
 	PlayerControllerClass = PlayerControllerFinder.Class;
 
-	static ConstructorHelpers::FClassFinder<AHUD> HUDFinder(TEXT("/Game/UI/BP_HUD"));
+	static ConstructorHelpers::FClassFinder<AHUD> HUDFinder(TEXT("/Game/UI/HUD/BP_HUD"));
 	HUDClass = HUDFinder.Class;
 
 	PlayerStateClass = ABSPlayerState::StaticClass();

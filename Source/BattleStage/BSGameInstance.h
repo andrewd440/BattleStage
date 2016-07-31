@@ -29,14 +29,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = GameInstance)
 	bool FindSessions(ULocalPlayer* LocalPlayer, const FString& Filters);
 
-	//-----------------------------------------------------------------
-	// UGameInstance interface
-	//-----------------------------------------------------------------
+	/** UGameInstance Interface Begin */
 	virtual bool JoinSession(ULocalPlayer* LocalPlayer, const FOnlineSessionSearchResult& SearchResult) override;
 	virtual bool JoinSession(ULocalPlayer* LocalPlayer, int32 SessionIndexInSearchResults) override;
-	//-----------------------------------------------------------------
-	// UGameInstance interface end
-	//-----------------------------------------------------------------
+	/** UGameInstance Interface End */
 
 protected:
 	void OnHostSessionCreated(FName SessionName, bool bWasSuccessful);

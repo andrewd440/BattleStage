@@ -120,6 +120,18 @@ const TArray<FOnlineSessionSearchResult>& ABSGameSession::GetSearchResults() con
 	return SearchSettings.IsValid() ? SearchSettings->SearchResults : EmptySearch;
 }
 
+const EOnlineAsyncTaskState::Type ABSGameSession::GetSearchStatus() const
+{
+	EOnlineAsyncTaskState::Type Status = EOnlineAsyncTaskState::NotStarted;
+
+	if (SearchSettings.IsValid())
+	{
+		Status = SearchSettings->SearchState;
+	}
+
+	return Status;
+}
+
 bool ABSGameSession::JoinSession(ULocalPlayer* LocalPlayer, const FOnlineSessionSearchResult& SearchResult)
 {
 	bool bOperationSuccessful = false;

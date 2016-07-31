@@ -38,12 +38,19 @@ bool UBSGameInstance::HostSession(ULocalPlayer* LocalPlayer, const FString& InTr
 		TravelURL = InTravelUrl;
 
 		// Get session info from url
-		const FString MapNamePrefix = "/Game/Maps/";
-		FString MapName = InTravelUrl.RightChop(MapNamePrefix.Len());
-		MapName = MapName.LeftChop(MapName.Len() - MapName.Find("?"));
+		FString MapPath;
+		FString Options;
+		InTravelUrl.Split(TEXT("?"), &MapPath, &Options);
 
-		const bool bIsLan = UGameplayStatics::HasOption(InTravelUrl, TravelURLKeys::IsLanMatch);
-		const FString GameType = UGameplayStatics::ParseOption(InTravelUrl, TravelURLKeys::GameType);
+		// Get map name
+		const FString MapNamePrefix = "/Game/Maps/";
+		FString MapName = MapPath.RightChop(MapNamePrefix.Len());
+
+		// Add ? to options begin
+		Options.InsertAt(0, TEXT("?"));
+
+		const bool bIsLan = UGameplayStatics::HasOption(Options, TravelURLKeys::IsLanMatch);
+		const FString GameType = UGameplayStatics::ParseOption(Options, TravelURLKeys::GameType);
 
 		// Set delegate and attempt to create the session
 		OnHostSessionCreatedHandle = GameSession->OnSessionCreated().AddUObject(this, &UBSGameInstance::OnHostSessionCreated);

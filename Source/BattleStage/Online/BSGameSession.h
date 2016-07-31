@@ -66,6 +66,8 @@ public:
 
 	const TArray<FOnlineSessionSearchResult>& GetSearchResults() const;
 
+	const EOnlineAsyncTaskState::Type GetSearchStatus() const;
+
 	bool JoinSession(ULocalPlayer* LocalPlayer, const FOnlineSessionSearchResult& SearchResult);
 
 	/**

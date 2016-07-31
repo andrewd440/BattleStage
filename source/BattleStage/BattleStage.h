@@ -10,6 +10,7 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(BattleStage, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(BattleStageOnline, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(BattleStageUI, Log, All);
 
 #define WEAPON_CHANNEL ECC_GameTraceChannel1
 

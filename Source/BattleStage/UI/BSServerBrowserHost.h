@@ -3,10 +3,11 @@
 #pragma once
 
 #include "UI/BSUIHost.h"
+#include "OnlineSessionSettings.h"
 #include "BSServerBrowserHost.generated.h"
 
 USTRUCT(BlueprintType)
-struct FServerBrowserRecord
+struct FServerListEntry
 {
 	GENERATED_BODY()
 
@@ -28,6 +29,9 @@ struct FServerBrowserRecord
 
 	UPROPERTY(BlueprintReadOnly)
 	int32 MaxConnections;
+
+	/** Search result this entry was derived from. */
+	FOnlineSessionSearchResult SearchResult;
 };
 
 /**
@@ -36,17 +40,42 @@ struct FServerBrowserRecord
 UCLASS(Blueprintable, Abstract)
 class BATTLESTAGE_API UBSServerBrowserHost : public UBSUIHost
 {
-	GENERATED_BODY()
+	GENERATED_UCLASS_BODY()
 
 public:
+
+	//-----------------------------------------------------------------
+	// Session Search
+	//-----------------------------------------------------------------
+	
 	UFUNCTION(BlueprintCallable, Category = ServerBrowser)
 	bool SearchForSessions();
 	
-	UFUNCTION(BlueprintCallable, Category = ServerBrowser)
-	TArray<FServerBrowserRecord> GetSearchResults();
+	const TArray<FServerListEntry>& GetSearchResults() const;
 
-	//UFUNCTION(BlueprintCallable, Category = ServerBrowser)
-	//bool JoinSession(); 
+	/**
+	* Updates the current search status.
+	* 
+	* @returns True if the search status changed.
+	*/
+	UFUNCTION(BlueprintCallable, Category = ServerBrowser)
+	bool UpdateSearchStatus();
+
+	UFUNCTION(BlueprintCallable, Category = ServerBrowser)
+	bool IsSearchInProgress() const;
+
+	UFUNCTION(BlueprintCallable, Category = ServerBrowser)
+	bool IsSearchFinished() const;
+
+	UFUNCTION(BlueprintCallable, Category = ServerBrowser)
+	bool IsSearchedFailed() const;
+
+	//-----------------------------------------------------------------
+	// Session Join
+	//-----------------------------------------------------------------
+	
+	UFUNCTION(BlueprintCallable, Category = ServerBrowser)
+	bool JoinSession(const FServerListEntry& Entry); 
 
 	/** UBSUIHost Interface Begin */
 	virtual void Open() override;
@@ -54,9 +83,22 @@ public:
 	/** UBSUIHost Interface End */
 
 protected:
+	void UpdateServerList(class ABSGameSession* GameSession);
+
+protected:
+	// The widget class used for the server browser UI
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = ServerBrowser)
 	TSubclassOf<UBSHostedWidget> BrowserWidgetClass;
 
 private:
-	UBSHostedWidget* BrowserWidget;
+	// Reference to the hosted browser UI widget
+	UBSHostedWidget* BrowserWidget = nullptr;
+
+	// Lastest server list retrieved on last call to UpdateSearchStatus
+	UPROPERTY(BlueprintReadOnly, Category = ServerBrowser, meta = (AllowPrivateAccess = true))
+	TArray<FServerListEntry> CurrentServerList;
+
+	// The current search status. May not match GameSession search status
+	// if UpdateSearchStatus() has not been called.
+	EOnlineAsyncTaskState::Type SearchStatus;
 };
