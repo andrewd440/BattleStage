@@ -20,7 +20,8 @@ public class BattleStage : ModuleRules
                 "HeadMountedDisplay",
                 "InputCore",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
+                "UMG"
             });
 
         DynamicallyLoadedModuleNames.AddRange(

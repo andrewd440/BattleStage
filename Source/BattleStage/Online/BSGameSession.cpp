@@ -15,6 +15,7 @@ ABSGameSession::ABSGameSession(const FObjectInitializer& ObjectInitializer)
 	OnCreateSessionCompleteDelegate = FOnCreateSessionCompleteDelegate::CreateUObject(this, &ABSGameSession::OnCreateDelegateComplete);
 	OnStartOnlineSessionCompleteDelegate = FOnStartSessionCompleteDelegate::CreateUObject(this, &ABSGameSession::OnStartOnlineSessionComplete);
 	OnFindSessionsCompletedDelegate = FOnFindSessionsCompleteDelegate::CreateUObject(this, &ABSGameSession::OnFindSessionsComplete);
+	OnJoinSessionCompleteDelegate = FOnJoinSessionCompleteDelegate::CreateUObject(this, &ABSGameSession::OnJoinSessionComplete);
 }
 
 bool ABSGameSession::CreateSession(ULocalPlayer* LocalPlayer, const FName SessionName, const int32 MaxConnections, const bool bIsLan, const FString& GameType, const FString& MapName)
@@ -111,4 +112,53 @@ void ABSGameSession::OnFindSessionsComplete(bool bWasSuccessful)
 	}
 
 	OnFindSessionsComplete().Broadcast(bWasSuccessful && SearchSettings->SearchResults.Num() > 0);
+}
+
+const TArray<FOnlineSessionSearchResult>& ABSGameSession::GetSearchResults() const
+{
+	static const TArray<FOnlineSessionSearchResult> EmptySearch;
+	return SearchSettings.IsValid() ? SearchSettings->SearchResults : EmptySearch;
+}
+
+bool ABSGameSession::JoinSession(ULocalPlayer* LocalPlayer, const FOnlineSessionSearchResult& SearchResult)
+{
+	bool bOperationSuccessful = false;
+
+	if (SearchResult.IsValid())
+	{
+		UE_LOG(BattleStageOnline, Log, TEXT("Starting to join online session by %s for %s"), *SearchResult.Session.OwningUserName, *LocalPlayer->GetName());
+
+		UWorld* const World = GetWorld();
+		check(World);
+		
+		IOnlineSessionPtr SessionPtr = Online::GetSessionInterface(World);
+		if (SessionPtr.IsValid())
+		{
+			OnJoinSessionCompleteHandle = SessionPtr->AddOnJoinSessionCompleteDelegate_Handle(OnJoinSessionCompleteDelegate);
+
+			SessionPtr->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), GameSessionName, SearchResult);
+		}
+	}
+	else
+	{
+		UE_LOG(BattleStageOnline, Warning, TEXT("%s attempted to join online session using invalid search result."), *LocalPlayer->GetName());
+	}
+
+	return bOperationSuccessful;
+}
+
+void ABSGameSession::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
+{
+	UE_LOG(BattleStageOnline, Log, TEXT("Join session completed %s"), Result == EOnJoinSessionCompleteResult::Success ? TEXT("successfully") : TEXT("unsuccessfully"));
+	
+	UWorld* const World = GetWorld();
+	check(World);
+
+	IOnlineSessionPtr SessionPtr = Online::GetSessionInterface(World);
+	if (SessionPtr.IsValid())
+	{
+		SessionPtr->ClearOnJoinSessionCompleteDelegate_Handle(OnJoinSessionCompleteHandle);
+	}
+
+	OnJoinSessionComplete().Broadcast(SessionName, Result);
 }

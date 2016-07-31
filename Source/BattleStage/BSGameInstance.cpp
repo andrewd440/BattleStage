@@ -56,12 +56,56 @@ bool UBSGameInstance::HostSession(ULocalPlayer* LocalPlayer, const FString& InTr
 
 bool UBSGameInstance::JoinSession(ULocalPlayer* LocalPlayer, const FOnlineSessionSearchResult& SearchResult)
 {
-	return false;
+	bool bOperationSuccessful = false;
+
+	if (!bIsOnline)
+	{
+		UE_LOG(BattleStageOnline, Warning, TEXT("Cannot join online session while game instance is in offline mode."));
+	}
+	else if (ABSGameSession* GameSession = GetGameSession())
+	{
+		OnJoinSessionCompleteHandle = GameSession->OnJoinSessionComplete().AddUObject(this, &UBSGameInstance::OnJoinSessionComplete);
+
+		GameSession->JoinSession(LocalPlayer, SearchResult);
+	}
+
+	return bOperationSuccessful;
 }
 
 bool UBSGameInstance::JoinSession(ULocalPlayer* LocalPlayer, int32 SessionIndexInSearchResults)
 {
-	return false;
+	bool bOperationSuccessful = false;
+
+	if (ABSGameSession* GameSession = GetGameSession())
+	{
+		const auto SearchResults = GameSession->GetSearchResults();
+		if (SearchResults.IsValidIndex(SessionIndexInSearchResults))
+		{
+			bOperationSuccessful = JoinSession(LocalPlayer, SearchResults[SessionIndexInSearchResults]);
+		}
+	}
+
+	return bOperationSuccessful;
+}
+
+void UBSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
+{
+	if (ABSGameSession* GameSession = GetGameSession())
+	{
+		GameSession->OnJoinSessionComplete().Remove(OnJoinSessionCompleteHandle);
+		OnJoinSessionCompleteHandle.Reset();
+
+		// #bstodo Handle other result types
+		switch (Result)
+		{
+			case EOnJoinSessionCompleteResult::Success:
+			{
+				ULocalPlayer* const LocalPlayer = GetFirstGamePlayer();
+				GameSession->TravelToSession(LocalPlayer->GetControllerId(), GameSessionName);
+				break;
+			}
+		}
+	}
 }
 
 void UBSGameInstance::OnHostSessionCreated(FName SessionName, bool bWasSuccessful)
@@ -112,6 +156,10 @@ void UBSGameInstance::OnFindSessionsComplete(bool bWasSuccessful)
 	if (!bWasSuccessful)
 	{
 		// #bstodo Notify could not find any sessions.
+	}
+	else
+	{
+		//JoinSession(GetLocalPlayerByIndex(0), 0);
 	}
 }
 

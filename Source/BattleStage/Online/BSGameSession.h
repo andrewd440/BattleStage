@@ -36,17 +36,24 @@ public:
 	 */
 	bool CreateSession(ULocalPlayer* LocalPlayer, const FName SessionName, const int32 MaxConnections, const bool bIsLan, const FString& GameType, const FString& MapName);
 
-
-	bool FindSessions(ULocalPlayer* LocalPlayer);
-
-	/** 
-	 * Broadcasted when a session has been created, or failed to be created. 
-	 * 
-	 * @param SessionName		The name of the session that was created.
-	 * @param bWasSuccessful	If the session was created successfully or not.
-	 */
+	/**
+	* Broadcasted when a session has been created, or failed to be created.
+	*
+	* @param SessionName		The name of the session that was created.
+	* @param bWasSuccessful	If the session was created successfully or not.
+	*/
 	DECLARE_EVENT_TwoParams(ABSGameSession, FOnSessionCreatedEvent, FName /*SessionName*/, bool /*bWasSuccessful*/)
 	FOnSessionCreatedEvent& OnSessionCreated() { return OnSessionCreatedEvent; }
+
+	/*
+	* Searches for online sessions. This is an sync operation that, upon completion, will broadcast
+	* the OnFindSessionsComplete event.
+	*
+	* @param LocalPlayer		The player that is searching for sessions.
+	*
+	* @return True if session creation was successful, false otherwise.
+	*/
+	bool FindSessions(ULocalPlayer* LocalPlayer);
 
 	/**
 	* Broadcasted when a session has been created, or failed to be created.
@@ -56,6 +63,19 @@ public:
 	*/
 	DECLARE_EVENT_OneParam(ABSGameSession, FOnSessionsFoundEvent, bool /*bWasSuccessful*/)
 	FOnSessionsFoundEvent& OnFindSessionsComplete() { return OnSessionsFoundEvent; }
+
+	const TArray<FOnlineSessionSearchResult>& GetSearchResults() const;
+
+	bool JoinSession(ULocalPlayer* LocalPlayer, const FOnlineSessionSearchResult& SearchResult);
+
+	/**
+	* Delegate fired when the joining process for an online session has completed
+	*
+	* @param SessionName	The name of the session this callback is for
+	* @param Result			The result of the join operation.
+	*/
+	DECLARE_EVENT_TwoParams(ABSGameSession, FOnJoinSessionEvent, FName /*SessionName*/, EOnJoinSessionCompleteResult::Type /*Result*/);
+	FOnJoinSessionEvent& OnJoinSessionComplete() { return OnJoinedSessionEvent; }
 
 private:	
 	/**
@@ -81,6 +101,8 @@ private:
 	*/
 	void OnFindSessionsComplete(bool bWasSuccessful);
 
+	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
+
 protected:
 	// The current sessions search settings
 	TSharedPtr<FBSOnlineSessionSearch> SearchSettings;
@@ -89,14 +111,17 @@ protected:
 	FOnCreateSessionCompleteDelegate OnCreateSessionCompleteDelegate;
 	FOnStartSessionCompleteDelegate OnStartOnlineSessionCompleteDelegate;
 	FOnFindSessionsCompleteDelegate OnFindSessionsCompletedDelegate;
+	FOnJoinSessionCompleteDelegate OnJoinSessionCompleteDelegate;
 
 	// Events broadcasted when network operations are completed
 	FOnSessionCreatedEvent OnSessionCreatedEvent;
 	FOnSessionsFoundEvent OnSessionsFoundEvent;
+	FOnJoinSessionEvent OnJoinedSessionEvent;
 
 private:
 	// Handles for network delegates
 	FDelegateHandle OnCreateSessionCompleteHandle;	
 	FDelegateHandle OnStartOnlineSessionHandle;
 	FDelegateHandle OnFindSessionsCompleteHandle;
+	FDelegateHandle OnJoinSessionCompleteHandle;
 };

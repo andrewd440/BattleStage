@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Engine/GameInstance.h"
+#include "OnlineSessionInterface.h"
 #include "BSGameInstance.generated.h"
 
 /**
@@ -42,6 +43,8 @@ protected:
 
 	void OnFindSessionsComplete(bool bWasSuccessful);
 
+	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
+
 protected:
 	/** Travel url held during async network operations */
 	FString TravelURL;
@@ -55,4 +58,5 @@ private:
 
 	FDelegateHandle OnHostSessionCreatedHandle;
 	FDelegateHandle OnFindSessionsCompleteHandle;
+	FDelegateHandle OnJoinSessionCompleteHandle;
 };
