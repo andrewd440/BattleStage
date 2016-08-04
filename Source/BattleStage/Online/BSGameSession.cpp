@@ -13,25 +13,23 @@ ABSGameSession::ABSGameSession(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
 	OnCreateSessionCompleteDelegate = FOnCreateSessionCompleteDelegate::CreateUObject(this, &ABSGameSession::OnCreateDelegateComplete);
-	OnStartOnlineSessionCompleteDelegate = FOnStartSessionCompleteDelegate::CreateUObject(this, &ABSGameSession::OnStartOnlineSessionComplete);
 	OnFindSessionsCompletedDelegate = FOnFindSessionsCompleteDelegate::CreateUObject(this, &ABSGameSession::OnFindSessionsComplete);
 	OnJoinSessionCompleteDelegate = FOnJoinSessionCompleteDelegate::CreateUObject(this, &ABSGameSession::OnJoinSessionComplete);
+	OnContinueDestroyingOnlineSessionDelegate = FOnCreateSessionCompleteDelegate::CreateUObject(this, &ABSGameSession::OnContinueDestroyingOnlineSession);
 }
 
 bool ABSGameSession::CreateSession(ULocalPlayer* LocalPlayer, const FName SessionName, const int32 MaxConnections, const bool bIsLan, const FString& GameType, const FString& MapName)
 {
 	UE_LOG(BattleStageOnline, Log, TEXT("Creating online session %s for %s"), *SessionName.ToString(), *LocalPlayer->GetName());
 
-	UWorld* const World = GetWorld();
-	check(World);
-
-	IOnlineSessionPtr SessionPtr = Online::GetSessionInterface(World);
-	if (SessionPtr.IsValid())
+	UWorld* World = GetWorld();
+	IOnlineSessionPtr SessionInt = Online::GetSessionInterface(World);
+	if (SessionInt.IsValid())
 	{
 		FBSOnlineSessionSettings Settings(MaxConnections, bIsLan, MapName, GameType);
 
-		OnCreateSessionCompleteHandle = SessionPtr->AddOnCreateSessionCompleteDelegate_Handle(OnCreateSessionCompleteDelegate);
-		return SessionPtr->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), SessionName, Settings);
+		OnCreateSessionCompleteHandle = SessionInt->AddOnCreateSessionCompleteDelegate_Handle(OnCreateSessionCompleteDelegate);
+		return SessionInt->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), SessionName, Settings);
 	}
 	else
 	{
@@ -42,57 +40,39 @@ bool ABSGameSession::CreateSession(ULocalPlayer* LocalPlayer, const FName Sessio
 
 void ABSGameSession::OnCreateDelegateComplete(FName SessionName, bool bWasSuccessful)
 {
-	UWorld* const World = GetWorld();
-	check(World);
-
-	IOnlineSessionPtr SessionPtr = Online::GetSessionInterface(World);
-	if (SessionPtr.IsValid())
+	UWorld* World = GetWorld();
+	IOnlineSessionPtr SessionInt = Online::GetSessionInterface(World);
+	if (SessionInt.IsValid())
 	{
-		SessionPtr->ClearOnCreateSessionCompleteDelegate_Handle(OnCreateSessionCompleteHandle);
+		SessionInt->ClearOnCreateSessionCompleteDelegate_Handle(OnCreateSessionCompleteHandle);
 
 		if (bWasSuccessful)
 		{
 			UE_LOG(BattleStageOnline, Log, TEXT("Online session successfully created."));
-			OnStartOnlineSessionHandle = SessionPtr->AddOnStartSessionCompleteDelegate_Handle(OnStartOnlineSessionCompleteDelegate);
-			SessionPtr->StartSession(SessionName);
 		}
 		else
 		{
 			UE_LOG(BattleStageOnline, Log, TEXT("Online session could not be created."));
 		}
+
+		OnSessionCreated().Broadcast(SessionName, bWasSuccessful);
 	}
-}
-
-void ABSGameSession::OnStartOnlineSessionComplete(FName SessionName, bool bWasSuccessful)
-{
-	UWorld* const World = GetWorld();
-	check(World);
-
-	IOnlineSessionPtr SessionPtr = Online::GetSessionInterface(World);
-	if (SessionPtr.IsValid())
-	{
-		SessionPtr->ClearOnStartSessionCompleteDelegate_Handle(OnStartOnlineSessionHandle);
-	}
-
-	OnSessionCreated().Broadcast(SessionName, bWasSuccessful);
 }
 
 bool ABSGameSession::FindSessions(ULocalPlayer* LocalPlayer)
 {
 	UE_LOG(BattleStageOnline, Log, TEXT("Starting to find online sessions for %s"), *LocalPlayer->GetName());
 
-	UWorld* const World = GetWorld();
-	check(World);
-
 	bool bOperationSuccessful = false;
 
-	IOnlineSessionPtr SessionPtr = Online::GetSessionInterface(World);
-	if (SessionPtr.IsValid())
+	UWorld* World = GetWorld();
+	IOnlineSessionPtr SessionInt = Online::GetSessionInterface(World);
+	if (SessionInt.IsValid())
 	{
-		OnFindSessionsCompleteHandle = SessionPtr->AddOnFindSessionsCompleteDelegate_Handle(OnFindSessionsCompletedDelegate);
+		OnFindSessionsCompleteHandle = SessionInt->AddOnFindSessionsCompleteDelegate_Handle(OnFindSessionsCompletedDelegate);
 
 		SearchSettings = MakeShareable(new FBSOnlineSessionSearch());
-		bOperationSuccessful = SessionPtr->FindSessions(*LocalPlayer->GetPreferredUniqueNetId(), SearchSettings.ToSharedRef());
+		bOperationSuccessful = SessionInt->FindSessions(*LocalPlayer->GetPreferredUniqueNetId(), SearchSettings.ToSharedRef());
 	}
 
 	return bOperationSuccessful;
@@ -102,13 +82,11 @@ void ABSGameSession::OnFindSessionsComplete(bool bWasSuccessful)
 {	
 	UE_LOG(BattleStageOnline, Log, TEXT("Find sessions completed: %s, found %d sessions."), bWasSuccessful ? TEXT("successfully") : TEXT("failure"), bWasSuccessful ? SearchSettings->SearchResults.Num() : 0);
 
-	UWorld* const World = GetWorld();
-	check(World);
-
-	IOnlineSessionPtr SessionPtr = Online::GetSessionInterface(World);
-	if (SessionPtr.IsValid())
+	UWorld* World = GetWorld();
+	IOnlineSessionPtr SessionInt = Online::GetSessionInterface(World);
+	if (SessionInt.IsValid())
 	{
-		SessionPtr->ClearOnFindSessionsCompleteDelegate_Handle(OnFindSessionsCompleteHandle);
+		SessionInt->ClearOnFindSessionsCompleteDelegate_Handle(OnFindSessionsCompleteHandle);
 	}
 
 	OnFindSessionsComplete().Broadcast(bWasSuccessful && SearchSettings->SearchResults.Num() > 0);
@@ -140,15 +118,13 @@ bool ABSGameSession::JoinSession(ULocalPlayer* LocalPlayer, const FOnlineSession
 	{
 		UE_LOG(BattleStageOnline, Log, TEXT("Starting to join online session by %s for %s"), *SearchResult.Session.OwningUserName, *LocalPlayer->GetName());
 
-		UWorld* const World = GetWorld();
-		check(World);
-		
-		IOnlineSessionPtr SessionPtr = Online::GetSessionInterface(World);
-		if (SessionPtr.IsValid())
+		UWorld* World = GetWorld();
+		IOnlineSessionPtr SessionInt = Online::GetSessionInterface(World);
+		if (SessionInt.IsValid())
 		{
-			OnJoinSessionCompleteHandle = SessionPtr->AddOnJoinSessionCompleteDelegate_Handle(OnJoinSessionCompleteDelegate);
+			OnJoinSessionCompleteHandle = SessionInt->AddOnJoinSessionCompleteDelegate_Handle(OnJoinSessionCompleteDelegate);
 
-			SessionPtr->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), GameSessionName, SearchResult);
+			SessionInt->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), GameSessionName, SearchResult);
 		}
 	}
 	else
@@ -163,14 +139,69 @@ void ABSGameSession::OnJoinSessionComplete(FName SessionName, EOnJoinSessionComp
 {
 	UE_LOG(BattleStageOnline, Log, TEXT("Join session completed %s"), Result == EOnJoinSessionCompleteResult::Success ? TEXT("successfully") : TEXT("unsuccessfully"));
 	
-	UWorld* const World = GetWorld();
-	check(World);
-
-	IOnlineSessionPtr SessionPtr = Online::GetSessionInterface(World);
-	if (SessionPtr.IsValid())
+	UWorld* World = GetWorld();
+	IOnlineSessionPtr SessionInt = Online::GetSessionInterface(World);
+	if (SessionInt.IsValid())
 	{
-		SessionPtr->ClearOnJoinSessionCompleteDelegate_Handle(OnJoinSessionCompleteHandle);
+		SessionInt->ClearOnJoinSessionCompleteDelegate_Handle(OnJoinSessionCompleteHandle);
 	}
 
 	OnJoinSessionComplete().Broadcast(SessionName, Result);
+}
+
+void ABSGameSession::ReturnToMainMenuHost()
+{
+	Super::ReturnToMainMenuHost();
+
+	GracefullyDestroyOnlineSession();
+}
+
+void ABSGameSession::GracefullyDestroyOnlineSession()
+{
+	UWorld* World = GetWorld();
+	IOnlineSessionPtr SessionInt = Online::GetSessionInterface(World);
+	if (SessionInt.IsValid())
+	{
+		const EOnlineSessionState::Type SessionState = SessionInt->GetSessionState(GameSessionName);
+
+		// Handle each possible state in the session state to ensure the the session is destroyed
+		// gracefully.
+		switch (SessionState)
+		{
+		case EOnlineSessionState::Creating:
+			OnContinueDestroyingOnlineSessionHandle = SessionInt->AddOnCreateSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionDelegate);
+			break;
+		case EOnlineSessionState::Starting:
+			OnContinueDestroyingOnlineSessionHandle = SessionInt->AddOnStartSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionDelegate);
+			break;
+		case EOnlineSessionState::InProgress:
+			OnContinueDestroyingOnlineSessionHandle = SessionInt->AddOnEndSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionDelegate);
+			SessionInt->EndSession(GameSessionName);
+		case EOnlineSessionState::Ending:
+			OnContinueDestroyingOnlineSessionHandle = SessionInt->AddOnEndSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionDelegate);
+			break;
+		case EOnlineSessionState::Ended:
+		case EOnlineSessionState::Pending:
+			OnContinueDestroyingOnlineSessionHandle = SessionInt->AddOnDestroySessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionDelegate);
+			SessionInt->DestroySession(GameSessionName);
+			break;
+		}
+	}
+}
+
+void ABSGameSession::OnContinueDestroyingOnlineSession(FName, bool)
+{
+	UWorld* World = GetWorld();
+	IOnlineSessionPtr SessionInt = Online::GetSessionInterface(World);
+	if (SessionInt.IsValid())
+	{
+		// Make sure all possible delegates are cleared from GracefullyDestroyOnlineSession.
+		SessionInt->ClearOnCreateSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionHandle);
+		SessionInt->ClearOnStartSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionHandle);
+		SessionInt->ClearOnEndSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionHandle);
+		SessionInt->ClearOnDestroySessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionHandle);
+
+		// Continue destruction
+		GracefullyDestroyOnlineSession();
+	}
 }

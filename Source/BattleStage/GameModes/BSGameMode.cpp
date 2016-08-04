@@ -11,11 +11,14 @@
 
 DEFINE_LOG_CATEGORY_STATIC(BSGameMode, Warning, All);
 
-ABSGameMode::ABSGameMode()
-	: Super()
+ABSGameMode::ABSGameMode(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
 {
+	MinPlayers = 2;
+	MaxPlayers = 8;
+
 	TimeLimit = 15;
-	ScoreGoal = 20;
+	ScoreGoal = 2;
 
 	KillScore = 1;
 	DeathScore = 0;
@@ -62,6 +65,18 @@ void ABSGameMode::InitGameState()
 		UE_LOG(BSGameMode, Warning, TEXT("ABSGameMode::InitGameState does not have a valid ABSGameState object. " 
 			"GameState could not be initialized."))
 	}
+}
+
+bool ABSGameMode::ReadyToStartMatch_Implementation()
+{
+	bool bIsReady = Super::ReadyToStartMatch_Implementation();
+
+	if (NumPlayers < MinPlayers)
+	{
+		bIsReady = false;
+	}
+
+	return bIsReady;
 }
 
 TSubclassOf<class AGameSession> ABSGameMode::GetGameSessionClass() const
@@ -116,6 +131,13 @@ void ABSGameMode::CheckScore(ABSPlayerState* Player)
 	}
 }
 
+void ABSGameMode::HandleMatchHasEnded()
+{
+	Super::HandleMatchHasEnded();
+
+	ReturnToMainMenuHost();
+}
+
 FString ABSGameMode::InitNewPlayer(class APlayerController* NewPlayerController, const TSharedPtr<const FUniqueNetId>& UniqueId, const FString& Options, const FString& Portal /*= TEXT("")*/)
 { 
 	FString ReturnString = Super::InitNewPlayer(NewPlayerController, UniqueId, Options, Portal);
@@ -133,5 +155,5 @@ FString ABSGameMode::InitNewPlayer(class APlayerController* NewPlayerController,
 
 bool ABSGameMode::ReadyToEndMatch_Implementation()
 {
-	return false;// WinningPlayer != nullptr || BSGameState->GetRemainingTime() <= 0;
+	return WinningPlayer != nullptr || BSGameState->GetRemainingTime() <= 0;
 }

@@ -20,7 +20,7 @@ class BATTLESTAGE_API ABSGameState : public AGameState
 public:
 	/** Get the time remaining it this match */
 	UFUNCTION(BlueprintCallable, Category = GameState)
-	int32 GetRemainingTime() const { return TimeRemaining; }
+	int32 GetRemainingTime() const { return TimeLimit - ElapsedTime; }
 	
 	/** Set the time limit for the current match */
 	void SetTimeLimit(const int32 Time);
@@ -54,20 +54,8 @@ public:
 	FOnRemainingTimeChangedEvent OnRemainingTimeChanged;
 
 private:
-	UFUNCTION()
-	void OnRep_ReplicatedTimeRemaining();
-
-private:
 	UPROPERTY(Transient, Replicated, BlueprintReadOnly, Category = GameState, meta = (AllowPrivateAccess = "true"))
 	int32 TimeLimit;
-
-	// Time remaining that is replicated at a specific interval
-	UPROPERTY(Transient, ReplicatedUsing = OnRep_ReplicatedTimeRemaining)
-	int32 ReplicatedTimeRemaining;
-
-	// The running time remaining in the match
-	UPROPERTY(Transient, BlueprintReadOnly, Category = GameState, meta = (AllowPrivateAccess = "true"))
-	int32 TimeRemaining;
 
 	UPROPERTY(Transient, Replicated, BlueprintReadOnly, Category = GameState, meta = (AllowPrivateAccess = "true"))
 	int32 GoalScore;

@@ -79,6 +79,10 @@ public:
 	DECLARE_EVENT_TwoParams(ABSGameSession, FOnJoinSessionEvent, FName /*SessionName*/, EOnJoinSessionCompleteResult::Type /*Result*/);
 	FOnJoinSessionEvent& OnJoinSessionComplete() { return OnJoinedSessionEvent; }
 
+	/** AGameSession Interface Begin */
+	virtual void ReturnToMainMenuHost() override;
+	/** AGameSession Interface End */
+
 private:	
 	/**
 	* Delegate fired when a session create request has completed
@@ -89,14 +93,6 @@ private:
 	void OnCreateDelegateComplete(FName SessionName, bool bWasSuccessful);
 
 	/**
-	* Delegate fired when the online session has transitioned to the started state
-	*
-	* @param SessionName the name of the session the that has transitioned to started
-	* @param bWasSuccessful true if the async action completed without error, false if there was an error
-	*/
-	void OnStartOnlineSessionComplete(FName SessionName, bool bWasSuccessful);
-
-	/**
 	* Delegate fired when the online session search has completed.
 	*
 	* @param bWasSuccessful True if the search was successful, false otherwise.
@@ -105,15 +101,19 @@ private:
 
 	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 
+private:
+	void GracefullyDestroyOnlineSession();
+	void OnContinueDestroyingOnlineSession(FName SessionName, bool bWasSuccessful);
+
 protected:
 	// The current sessions search settings
 	TSharedPtr<FBSOnlineSessionSearch> SearchSettings;
 
 	// Delegates for network operations
 	FOnCreateSessionCompleteDelegate OnCreateSessionCompleteDelegate;
-	FOnStartSessionCompleteDelegate OnStartOnlineSessionCompleteDelegate;
 	FOnFindSessionsCompleteDelegate OnFindSessionsCompletedDelegate;
 	FOnJoinSessionCompleteDelegate OnJoinSessionCompleteDelegate;
+	FOnCreateSessionCompleteDelegate OnContinueDestroyingOnlineSessionDelegate;
 
 	// Events broadcasted when network operations are completed
 	FOnSessionCreatedEvent OnSessionCreatedEvent;
@@ -123,7 +123,7 @@ protected:
 private:
 	// Handles for network delegates
 	FDelegateHandle OnCreateSessionCompleteHandle;	
-	FDelegateHandle OnStartOnlineSessionHandle;
 	FDelegateHandle OnFindSessionsCompleteHandle;
 	FDelegateHandle OnJoinSessionCompleteHandle;
+	FDelegateHandle OnContinueDestroyingOnlineSessionHandle;
 };

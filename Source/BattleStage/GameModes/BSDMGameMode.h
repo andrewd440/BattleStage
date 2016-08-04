@@ -11,7 +11,7 @@
 UCLASS()
 class BATTLESTAGE_API ABSDMGameMode : public ABSGameMode
 {
-	GENERATED_BODY()
+	GENERATED_UCLASS_BODY()
 	
 	
 	

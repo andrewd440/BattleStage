@@ -8,15 +8,9 @@ class ABSPlayerState;
 UCLASS(minimalapi)
 class ABSGameMode : public AGameMode
 {
-	GENERATED_BODY()
+	GENERATED_UCLASS_BODY()
 
 public:
-	ABSGameMode();
-
-	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
-
-	virtual void InitGameState() override; 
-
 	/**
 	* Score a player kill.
 	*
@@ -33,8 +27,6 @@ public:
 	UFUNCTION(BlueprintNativeEvent, Category = GameMode)
 	void ScoreDeath(AController* Player);
 
-	TSubclassOf<class AGameSession> GetGameSessionClass() const override;
-
 protected:
 
 	/**
@@ -45,12 +37,25 @@ protected:
 	*/
 	virtual void CheckScore(ABSPlayerState* Player);
 
-
-	virtual FString InitNewPlayer(class APlayerController* NewPlayerController, const TSharedPtr<const FUniqueNetId>& UniqueId, const FString& Options, const FString& Portal = TEXT("")) override;
-
-	bool ReadyToEndMatch_Implementation() override;
+	/** AGameMode Interface Begin */
+public:
+	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
+	virtual void InitGameState() override;
+	virtual TSubclassOf<class AGameSession> GetGameSessionClass() const override;
 
 protected:
+	virtual FString InitNewPlayer(class APlayerController* NewPlayerController, const TSharedPtr<const FUniqueNetId>& UniqueId, const FString& Options, const FString& Portal = TEXT("")) override;
+	virtual bool ReadyToStartMatch_Implementation() override;
+	virtual bool ReadyToEndMatch_Implementation() override;
+	virtual void HandleMatchHasEnded() override;
+	/** AGameMode Interface End */
+
+protected:
+	UPROPERTY(config, EditDefaultsOnly, Category = GameMode)
+	int32 MinPlayers;
+
+	UPROPERTY(config, EditDefaultsOnly, Category = GameMode)
+	int32 MaxPlayers;
 
 	// Score goal for the game
 	UPROPERTY(config, EditDefaultsOnly, Category = GameMode)
