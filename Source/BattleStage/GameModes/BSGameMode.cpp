@@ -14,7 +14,7 @@ DEFINE_LOG_CATEGORY_STATIC(BSGameMode, Warning, All);
 ABSGameMode::ABSGameMode(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	MinPlayers = 2;
+	MinPlayers = 1;
 	MaxPlayers = 8;
 
 	TimeLimit = 15;

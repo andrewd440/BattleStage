@@ -60,6 +60,20 @@ struct FWeaponStats
 	bool bIsAuto;
 };
 
+USTRUCT()
+struct FWeaponAnim
+{
+	GENERATED_USTRUCT_BODY()
+
+	/** Montage to play on first person mesh */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UAnimMontage* FirstPerson = nullptr;
+
+	/** Montage to play on third person mesh */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UAnimMontage* ThirdPerson = nullptr;
+};
+
 UCLASS(Blueprintable, Abstract, NotPlaceable, Config = Game)
 class BATTLESTAGE_API ABSWeapon : public AActor
 {
@@ -139,6 +153,8 @@ protected:
 
 	// Owning client only.
 	void FireShot();
+
+	void InvokeShot(const FShotData& ShotData);
 
 	/**
 	* Only called on the server. Notifies the weapon that a shot has been fired
@@ -277,7 +293,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = WeaponData)
 	TSubclassOf<class UBSShotType> ShotTypeClass = nullptr;
 
-	UPROPERTY(VisibleAnywhere, Replicated, Category = WeaponData)
+	UPROPERTY(Replicated)
 	class UBSShotType* ShotType = nullptr;
 
 	// Timer used by this server to manage weapon state changes
@@ -334,27 +350,30 @@ protected:
 	//-----------------------------------------------------------------
 	// Weapon Animation 
 	//-----------------------------------------------------------------
-	
+protected:
+	UAnimMontage* GetWeaponMontage(const FWeaponAnim& WeaponAnim);
+
+protected:
 	// Played on the character on equip
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation)
-	UAnimMontage* EquipAnim = nullptr;
+	FWeaponAnim EquipAnim;
 
 	// Played on the character on unequip
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation)
-	UAnimMontage* UnequipAnim = nullptr;
+	FWeaponAnim UnequipAnim;
 
 	// Played on the character on fire
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation)
-	UAnimMontage* FireAnim = nullptr;
+	FWeaponAnim FireAnim;
 
 	// Played on the character on reload
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation)
-	UAnimMontage* ReloadAnim = nullptr;
+	FWeaponAnim ReloadAnim;
 
 	//-----------------------------------------------------------------
 	// Weapon FX
 	//-----------------------------------------------------------------
-
+protected:
 	// Muzzle FX for firing
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = FX)
 	class UParticleSystem* MuzzleFX = nullptr;

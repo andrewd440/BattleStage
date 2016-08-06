@@ -167,6 +167,11 @@ float ABSWeapon::GetCurrentSpread() const
 	return WeaponStats.BaseSpread + MovementSpread + StandingSpread;
 }
 
+UAnimMontage* ABSWeapon::GetWeaponMontage(const FWeaponAnim& WeaponAnim)
+{
+	return (BSCharacter->IsFirstPerson()) ? WeaponAnim.FirstPerson : WeaponAnim.ThirdPerson;
+}
+
 void ABSWeapon::PlayFireEffects()
 {
 	if (MuzzleFX && (!MuzzleFX->IsLooping() || !MuzzleFXComponent))
@@ -187,8 +192,9 @@ void ABSWeapon::PlayFireEffects()
 		FireSoundComponent->Play();
 	}
 
-	if (FireAnim)
-		BSCharacter->PlayAnimMontage(FireAnim);
+	UAnimMontage* FireMontage = GetWeaponMontage(FireAnim);
+	if (FireMontage)
+		BSCharacter->PlayAnimMontage(FireMontage);
 }
 
 void ABSWeapon::SetWeaponState(EWeaponState State)
@@ -345,11 +351,7 @@ void ABSWeapon::FireShot()
 			{
 				ShotType->PreInvokeShot(ShotData);
 
-				// Invoke the actual shot on the server
-				ServerInvokeShot(ShotData);
-
-				if(GetNetMode() == NM_Client)
-					PlayFireEffects();
+				InvokeShot(ShotData);
 
 				LastFireTime = GetWorld()->GetTimeSeconds();
 			}
@@ -365,28 +367,41 @@ void ABSWeapon::FireShot()
 	}
 }
 
-void ABSWeapon::ServerInvokeShot_Implementation(const FShotData& ShotData)
+void ABSWeapon::InvokeShot(const FShotData& ShotData)
 {
-	// Ensure the weapon can fire on the server. If not, force a state change.
-	if (CanFire())
+	if (!HasAuthority())
 	{
-		ShotType->InvokeShot(ShotData);
-
-		RemainingClip--;
-
-		bServerFired = !bServerFired;
-
-		if (GetNetMode() != NM_DedicatedServer)
-			OnRep_ServerFired();
-	}
-	else if (CanReload())
-	{
-		SetWeaponState(EWeaponState::Reloading);
+		ServerInvokeShot(ShotData);
+		PlayFireEffects();
 	}
 	else
 	{
-		SetWeaponState(EWeaponState::Active);
+		// Ensure the weapon can fire on the server. If not, force a state change.
+		if (CanFire())
+		{
+			ShotType->InvokeShot(ShotData);
+
+			RemainingClip--;
+
+			bServerFired = !bServerFired;
+
+			if (GetNetMode() != NM_DedicatedServer)
+				OnRep_ServerFired();
+		}
+		else if (CanReload())
+		{
+			SetWeaponState(EWeaponState::Reloading);
+		}
+		else
+		{
+			SetWeaponState(EWeaponState::Active);
+		}
 	}
+}
+
+void ABSWeapon::ServerInvokeShot_Implementation(const FShotData& ShotData)
+{
+	InvokeShot(ShotData);
 }
 
 bool ABSWeapon::ServerInvokeShot_Validate(const FShotData& ShotData)
@@ -546,9 +561,9 @@ float ABSWeapon::PlayEquipSequence()
 {
 	float SequenceLength = 0.f;
 
-	if (EquipAnim)
+	if (UAnimMontage* EquipMontage = GetWeaponMontage(EquipAnim))
 	{
-		SequenceLength = BSCharacter->PlayAnimMontage(EquipAnim);
+		SequenceLength = BSCharacter->PlayAnimMontage(EquipMontage);
 	}
 
 	return SequenceLength;
@@ -558,9 +573,9 @@ float ABSWeapon::PlayUnequipSequence()
 {
 	float SequenceLength = 0.f;
 
-	if (UnequipAnim)
+	if (UAnimMontage* UnequipMontage = GetWeaponMontage(UnequipAnim))
 	{
-		SequenceLength = BSCharacter->PlayAnimMontage(UnequipAnim);
+		SequenceLength = BSCharacter->PlayAnimMontage(UnequipMontage);
 	}
 
 	return SequenceLength;
@@ -568,10 +583,10 @@ float ABSWeapon::PlayUnequipSequence()
 
 float ABSWeapon::PlayReloadSequence()
 {
-	if (ReloadAnim)
+	if (UAnimMontage* ReloadMontage = GetWeaponMontage(ReloadAnim))
 	{
-		const float AnimLengthScale = ReloadAnim->CalculateSequenceLength() / WeaponStats.ReloadSpeed;
-		const float AnimLength = BSCharacter->PlayAnimMontage(ReloadAnim, AnimLengthScale);
+		const float AnimLengthScale = ReloadMontage->CalculateSequenceLength() / WeaponStats.ReloadSpeed;
+		const float AnimLength = BSCharacter->PlayAnimMontage(ReloadMontage, AnimLengthScale);
 	}
 
 	return WeaponStats.ReloadSpeed;

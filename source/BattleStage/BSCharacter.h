@@ -37,15 +37,23 @@ class ABSCharacter : public ACharacter
 	class USkeletalMeshComponent* FirstPersonMesh;
 
 public:
-	ABSCharacter();
+	ABSCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintCallable, Category = Character)
 	float GetAimSpread() const;
 
+	float GetMovementModifier() const;
+
 	virtual void StartFire();
 	virtual void StopFire();
+
+	UFUNCTION(BlueprintCallable, Category = Character)
+	bool IsRunning() const;
+
+	virtual void SetRunning(bool bNewRunning);
+	virtual void ToggleRunning();
 
 	void ReloadWeapon();
 
@@ -67,27 +75,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Health)
 	bool CanDie() const;
 
-	//-----------------------------------------------------------------
-	// ACharacter Interface
-	//-----------------------------------------------------------------	
+	/** ACharacter Interface Begin */
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void Tick(float DeltaSeconds) override;
-	//-----------------------------------------------------------------
-	// ACharacter Interface End
-	//-----------------------------------------------------------------	
+	/** ACharacter Interface End */
 
-	//-----------------------------------------------------------------
-	// APawn Interface
-	//-----------------------------------------------------------------
+	/** APawn Interface Begin */
 	virtual float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 	virtual bool ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) const override;
-	//-----------------------------------------------------------------
-	// APawn Interface End
-	//-----------------------------------------------------------------	
+	/** APawn Interface End */
 
-	//-----------------------------------------------------------------
-	// AActor Interface
-	//-----------------------------------------------------------------	
+
+	/** AActor Interface Begin */
 	virtual void BeginPlay() override;
 
 	/** 
@@ -95,9 +94,10 @@ public:
 	 * this is a first person character, otherwise it will be played on the third person mesh.
 	 */
 	virtual float PlayAnimMontage(class UAnimMontage* AnimMontage, float InPlayRate = 1.f, FName StartSectionName = NAME_None) override;
-	//-----------------------------------------------------------------
-	// AActor Interface End
-	//-----------------------------------------------------------------	
+
+	virtual void StopAnimMontage(class UAnimMontage* AnimMontage = NULL) override;
+
+	/** AActor Interface End */
 
 protected:
 	/**
@@ -121,17 +121,23 @@ protected:
 	TSubclassOf<ABSWeapon> DefaultWeaponClass = nullptr;
 
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = Weapon)
-	ABSWeapon* Weapon;
+	ABSWeapon* Weapon = nullptr;
 
 	// Socket name to attach equipped weapons
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	FName WeaponEquippedSocket;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Character)
+	float RunningMovementModifier;
+
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = Character)
+	uint32 bIsRunning : 1;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Health, Replicated)
 	int32 Health;
 
 	UPROPERTY(ReplicatedUsing = OnRep_IsDying)
-	bool bIsDying;
+	uint32 bIsDying : 1;
 
 	UPROPERTY(BlueprintReadOnly, Transient, ReplicatedUsing = OnRecieveHit)
 	FReceiveHitInfo ReceiveHitInfo;
@@ -169,6 +175,9 @@ private:
 	void OnRep_IsDying();
 
 	void SetRecieveHitInfo(const float Damage, FDamageEvent const& DamageEvent);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerSetRunning(bool bNewRunning);
 
 public:
 	/** Returns FirstPersonCamera subobject **/

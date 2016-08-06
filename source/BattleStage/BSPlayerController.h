@@ -52,13 +52,12 @@ protected:
 	*/
 	void OnLookUpRate(float Rate);
 
-	/** Handles fire input */
 	void OnStartFire();
-
-	/** Handles fire input */
 	void OnStopFire();
-
 	void OnReload();
+	void OnStartSprint();
+	void OnToggleSprint();
+	void OnStopSprint();
 
 protected:
 	/* The base turn rate of the player **/

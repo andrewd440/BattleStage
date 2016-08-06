@@ -9,12 +9,12 @@
 #include "Weapons/BSWeapon.h"
 #include "UnrealNetwork.h"
 #include "GameModes/BSGameMode.h"
+#include "BSCharacterMovementComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
-ABSCharacter::ABSCharacter()
-	: Super()
-	, WeaponEquippedSocket(TEXT("GripPoint"))
+ABSCharacter::ABSCharacter(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UBSCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	// First person camera
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
@@ -42,8 +42,11 @@ ABSCharacter::ABSCharacter()
 	Mesh->RelativeRotation = FRotator{ 0.f, -90.f, 0.f };
 
 	bIsDying = false;
+	bIsRunning = false;
 	Health = 100;
-	Weapon = nullptr;
+	RunningMovementModifier = 1.5f;
+
+	WeaponEquippedSocket = TEXT("GripPoint");
 }
 
 void ABSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -52,6 +55,7 @@ void ABSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 
 	DOREPLIFETIME(ABSCharacter, Weapon);
 	DOREPLIFETIME(ABSCharacter, bIsDying);
+	DOREPLIFETIME_CONDITION(ABSCharacter, bIsRunning, COND_SkipOwner);
 }
 
 float ABSCharacter::GetAimSpread() const
@@ -62,10 +66,27 @@ float ABSCharacter::GetAimSpread() const
 	return 0.f;
 }
 
+float ABSCharacter::GetMovementModifier() const
+{
+	float Modifier = 1.0f;
+
+	if (bIsRunning)
+	{
+		Modifier = RunningMovementModifier;
+	}
+
+	return Modifier;
+}
+
 void ABSCharacter::StartFire()
 {
 	if (Weapon)
 	{
+		if (bIsRunning)
+		{
+			SetRunning(false);
+		}
+
 		Weapon->StartFire();
 	}
 }
@@ -76,6 +97,41 @@ void ABSCharacter::StopFire()
 	{
 		Weapon->StopFire();
 	}
+}
+
+bool ABSCharacter::IsRunning() const
+{
+	return bIsRunning;
+}
+
+void ABSCharacter::SetRunning(bool bNewRunning)
+{
+	bIsRunning = bNewRunning;
+	
+	if (bNewRunning && Weapon)
+	{
+		Weapon->StopFire();
+	}
+
+	if (!HasAuthority())
+	{
+		ServerSetRunning(bNewRunning);
+	}
+}
+
+void ABSCharacter::ServerSetRunning_Implementation(bool bNewRunning)
+{
+	SetRunning(bNewRunning);
+}
+
+bool ABSCharacter::ServerSetRunning_Validate(bool bNewRunning)
+{
+	return true;
+}
+
+void ABSCharacter::ToggleRunning()
+{
+	SetRunning(!bIsRunning);
 }
 
 void ABSCharacter::ReloadWeapon()
@@ -92,6 +148,21 @@ USkeletalMeshComponent* ABSCharacter::GetActiveMesh() const
 void ABSCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	// If we are running, make sure our pending movement is forward. If not, stop running.
+	if (bIsRunning && IsLocallyControlled())
+	{
+		const FVector Movement = GetLastMovementInputVector().GetSafeNormal2D();
+		const FVector Forward = GetActorForwardVector().GetSafeNormal2D();
+		
+		// Tolerance is half 30 degrees in the forward direction		
+		const float Tolerance = FMath::Cos(PI / 6.0f);
+
+		if (FVector::DotProduct(Movement, Forward) < Tolerance)
+		{
+			SetRunning(false);
+		}
+	}
 }
 
 void ABSCharacter::BeginPlay()
@@ -121,6 +192,19 @@ float ABSCharacter::PlayAnimMontage(class UAnimMontage* AnimMontage, float InPla
 	}
 
 	return Duration;
+}
+
+void ABSCharacter::StopAnimMontage(class UAnimMontage* AnimMontage /*= NULL*/)
+{
+	USkeletalMeshComponent* ActiveMesh = GetActiveMesh();
+	UAnimInstance * AnimInstance = (ActiveMesh) ? ActiveMesh->GetAnimInstance() : nullptr;
+	UAnimMontage * MontageToStop = (AnimMontage) ? AnimMontage : GetCurrentMontage();
+	bool bShouldStopMontage = AnimInstance && MontageToStop && !AnimInstance->Montage_GetIsStopped(MontageToStop);
+
+	if (bShouldStopMontage)
+	{
+		AnimInstance->Montage_Stop(MontageToStop->BlendOut.GetBlendTime(), MontageToStop);
+	}
 }
 
 bool ABSCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) const

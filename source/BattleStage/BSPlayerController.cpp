@@ -55,6 +55,9 @@ void ABSPlayerController::SetupInputComponent()
 	InputComponent->BindAxis("MoveRight", this, &ABSPlayerController::OnMoveRight);
 
 	InputComponent->BindAction("Jump", IE_Pressed, this, &ABSPlayerController::OnJump);
+	InputComponent->BindAction("Sprint", IE_Pressed, this, &ABSPlayerController::OnStartSprint);
+	InputComponent->BindAction("Sprint", IE_Released, this, &ABSPlayerController::OnStopSprint);
+	InputComponent->BindAction("ToggleSprint", IE_Pressed, this, &ABSPlayerController::OnToggleSprint);
 
 	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
 	// "turn" handles devices that provide an absolute delta, such as a mouse.
@@ -147,5 +150,29 @@ void ABSPlayerController::OnReload()
 	if (BSCharacter)
 	{
 		BSCharacter->ReloadWeapon();
+	}
+}
+
+void ABSPlayerController::OnStartSprint()
+{
+	if (BSCharacter)
+	{
+		BSCharacter->SetRunning(true);
+	}
+}
+
+void ABSPlayerController::OnToggleSprint()
+{
+	if (BSCharacter)
+	{
+		BSCharacter->ToggleRunning();
+	}
+}
+
+void ABSPlayerController::OnStopSprint()
+{
+	if (BSCharacter)
+	{
+		BSCharacter->SetRunning(false);
 	}
 }
