@@ -58,6 +58,7 @@ void ABSPlayerController::SetupInputComponent()
 	InputComponent->BindAction("Sprint", IE_Pressed, this, &ABSPlayerController::OnStartSprint);
 	InputComponent->BindAction("Sprint", IE_Released, this, &ABSPlayerController::OnStopSprint);
 	InputComponent->BindAction("ToggleSprint", IE_Pressed, this, &ABSPlayerController::OnToggleSprint);
+	InputComponent->BindAction("Crouch", IE_Pressed, this, &ABSPlayerController::OnCrouch);
 
 	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
 	// "turn" handles devices that provide an absolute delta, such as a mouse.
@@ -174,5 +175,20 @@ void ABSPlayerController::OnStopSprint()
 	if (BSCharacter)
 	{
 		BSCharacter->SetRunning(false);
+	}
+}
+
+void ABSPlayerController::OnCrouch()
+{
+	if (BSCharacter)
+	{
+		if (BSCharacter->bIsCrouched)
+		{
+			BSCharacter->UnCrouch();
+		}
+		else
+		{
+			BSCharacter->Crouch();
+		}
 	}
 }

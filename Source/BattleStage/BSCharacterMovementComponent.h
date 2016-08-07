@@ -14,5 +14,7 @@ class BATTLESTAGE_API UBSCharacterMovementComponent : public UCharacterMovementC
 	GENERATED_BODY()
 
 public:
+	UBSCharacterMovementComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+
 	virtual float GetMaxSpeed() const override;
 };

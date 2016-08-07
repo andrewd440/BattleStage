@@ -78,6 +78,10 @@ public:
 	/** ACharacter Interface Begin */
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void Tick(float DeltaSeconds) override;
+
+	virtual void Crouch(bool bClientSimulation = false) override;
+	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	/** ACharacter Interface End */
 
 	/** APawn Interface Begin */
@@ -87,6 +91,7 @@ public:
 
 
 	/** AActor Interface Begin */
+	virtual void PostInitProperties() override;
 	virtual void BeginPlay() override;
 
 	/** 
@@ -96,7 +101,6 @@ public:
 	virtual float PlayAnimMontage(class UAnimMontage* AnimMontage, float InPlayRate = 1.f, FName StartSectionName = NAME_None) override;
 
 	virtual void StopAnimMontage(class UAnimMontage* AnimMontage = NULL) override;
-
 	/** AActor Interface End */
 
 protected:
@@ -132,6 +136,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = Character)
 	uint32 bIsRunning : 1;
+
+	UPROPERTY(EditDefaultsOnly, Category = Character)
+	float CrouchCameraSpeed;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Health, Replicated)
 	int32 Health;
@@ -170,6 +177,8 @@ private:
 
 	void TakeHit(const float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser);
 
+	void UpdateViewTarget(const float DeltaSeconds);
+
 private:
 	UFUNCTION()
 	void OnRep_IsDying();
@@ -178,6 +187,9 @@ private:
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerSetRunning(bool bNewRunning);
+
+private:
+	float LastEyeHeight;
 
 public:
 	/** Returns FirstPersonCamera subobject **/

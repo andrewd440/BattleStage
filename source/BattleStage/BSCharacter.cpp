@@ -18,7 +18,7 @@ ABSCharacter::ABSCharacter(const FObjectInitializer& ObjectInitializer)
 {
 	// First person camera
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
-	FirstPersonCamera->RelativeLocation = FVector(2.57f, -4.72f, 72.54f);
+	FirstPersonCamera->RelativeLocation = FVector(0, 2.56f, 74.f);
 	FirstPersonCamera->bUsePawnControlRotation = true;
 	FirstPersonCamera->SetupAttachment(GetCapsuleComponent());
 
@@ -29,8 +29,8 @@ ABSCharacter::ABSCharacter(const FObjectInitializer& ObjectInitializer)
 	FirstPersonMesh->SetCastShadow(false);
 	FirstPersonMesh->bOnlyOwnerSee = true;
 	FirstPersonMesh->bReceivesDecals = false;
-	FirstPersonMesh->RelativeRotation = FRotator{ -3.3f, -107.75f, -4.88f };
-	FirstPersonMesh->RelativeLocation = FVector{ 10.22f, 22.63f, -157.02f };
+	FirstPersonMesh->RelativeRotation = FRotator{ 0.f, -90.f, -5.f };
+	FirstPersonMesh->RelativeLocation = FVector{ 0, -5.f, -130.f };
 
 	// Setup character mesh.
 	// Owner can not see and does replicate.
@@ -45,7 +45,8 @@ ABSCharacter::ABSCharacter(const FObjectInitializer& ObjectInitializer)
 	bIsRunning = false;
 	Health = 100;
 	RunningMovementModifier = 1.5f;
-
+	CrouchCameraSpeed = 500.f;
+	
 	WeaponEquippedSocket = TEXT("GripPoint");
 }
 
@@ -106,16 +107,26 @@ bool ABSCharacter::IsRunning() const
 
 void ABSCharacter::SetRunning(bool bNewRunning)
 {
-	bIsRunning = bNewRunning;
-	
-	if (bNewRunning && Weapon)
+	if (bIsRunning != bNewRunning)
 	{
-		Weapon->StopFire();
-	}
+		bIsRunning = bNewRunning;
 
-	if (!HasAuthority())
-	{
-		ServerSetRunning(bNewRunning);
+		if (bNewRunning)			
+		{
+			// No firing while running
+			if (Weapon)
+			{
+				Weapon->StopFire();
+			}
+
+			// Stop crouching before running
+			UnCrouch();
+		}
+
+		if (!HasAuthority())
+		{
+			ServerSetRunning(bNewRunning);
+		}
 	}
 }
 
@@ -163,6 +174,8 @@ void ABSCharacter::Tick(float DeltaSeconds)
 			SetRunning(false);
 		}
 	}
+
+	UpdateViewTarget(DeltaSeconds);
 }
 
 void ABSCharacter::BeginPlay()
@@ -207,9 +220,43 @@ void ABSCharacter::StopAnimMontage(class UAnimMontage* AnimMontage /*= NULL*/)
 	}
 }
 
+void ABSCharacter::Crouch(bool bClientSimulation /*= false*/)
+{
+	SetRunning(false);
+
+	Super::Crouch(bClientSimulation);
+}
+
+void ABSCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	// Save eye height so we can lerp to new location following start crouch.
+	LastEyeHeight = FirstPersonCamera->RelativeLocation.Z + HalfHeightAdjust;
+
+	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+
+	FirstPersonCamera->SetRelativeLocation(FVector{0.f, 0.f, LastEyeHeight });
+}
+
+void ABSCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	// Save eye height so we can lerp to new location following start crouch.
+	LastEyeHeight = FirstPersonCamera->RelativeLocation.Z - HalfHeightAdjust;
+
+	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+
+	FirstPersonCamera->SetRelativeLocation(FVector{ 0.f, 0.f, LastEyeHeight });
+}
+
 bool ABSCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) const
 {
 	return CanDie() && Super::ShouldTakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
+}
+
+void ABSCharacter::PostInitProperties()
+{
+	Super::PostInitProperties();
+
+	LastEyeHeight = BaseEyeHeight;
 }
 
 float ABSCharacter::TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -272,6 +319,23 @@ void ABSCharacter::TakeHit(const float Damage, FDamageEvent const& DamageEvent, 
 	ApplyDamageMomentum(Damage, DamageEvent, nullptr, DamageCauser);
 	
 	OnRecieveHit();
+}
+
+void ABSCharacter::UpdateViewTarget(const float DeltaSeconds)
+{
+	if (FMath::Abs(LastEyeHeight - BaseEyeHeight) > 0.01f)
+	{
+		// Get lerp alpha for camera from LastEyHeight to BaseEyeHeight
+		const float Distance = BaseEyeHeight - LastEyeHeight;
+		const float DeltaAlpha = CrouchCameraSpeed / FMath::Abs(Distance) * DeltaSeconds;
+
+		// Get new camera height
+		FVector Location = FirstPersonCamera->RelativeLocation;
+		Location.Z = FMath::Lerp(LastEyeHeight, BaseEyeHeight, FMath::Min(DeltaAlpha, 1.0f));
+
+		FirstPersonCamera->SetRelativeLocation(Location);
+		LastEyeHeight = Location.Z;
+	}
 }
 
 void ABSCharacter::SetRecieveHitInfo(const float Damage, FDamageEvent const& DamageEvent)

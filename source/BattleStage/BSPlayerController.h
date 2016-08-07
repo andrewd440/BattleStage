@@ -58,6 +58,7 @@ protected:
 	void OnStartSprint();
 	void OnToggleSprint();
 	void OnStopSprint();
+	void OnCrouch();
 
 protected:
 	/* The base turn rate of the player **/
