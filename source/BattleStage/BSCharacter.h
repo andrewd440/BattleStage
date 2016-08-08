@@ -52,6 +52,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Character)
 	bool IsRunning() const;
 
+	bool CanRun() const;
+
 	virtual void SetRunning(bool bNewRunning);
 	virtual void ToggleRunning();
 
@@ -79,6 +81,7 @@ public:
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void Tick(float DeltaSeconds) override;
 
+	virtual void Jump() override;
 	virtual void Crouch(bool bClientSimulation = false) override;
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;

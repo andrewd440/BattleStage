@@ -30,6 +30,11 @@ public:
 	UFUNCTION(Reliable, Client)
 	void ClientSetSpectatorCamera(const FVector CameraLocation, const FRotator CameraRotation);
 
+	/**
+	* Notifies the controller it has hit a character with a weapon under the control of the it's pawn.
+	*/
+	virtual void NotifyWeaponHit();
+
 protected:
 	/** Handles moving forward/backward */
 	void OnMoveForward(float Val);

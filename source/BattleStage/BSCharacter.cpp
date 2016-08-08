@@ -26,7 +26,9 @@ ABSCharacter::ABSCharacter(const FObjectInitializer& ObjectInitializer)
 	// Only owner can see and does not replicate.
 	FirstPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FirstPersonMesh"));
 	FirstPersonMesh->SetupAttachment(FirstPersonCamera);
-	FirstPersonMesh->SetCastShadow(false);
+	FirstPersonMesh->SetCastShadow(true);
+	FirstPersonMesh->bSelfShadowOnly = true;
+	FirstPersonMesh->MeshComponentUpdateFlag = EMeshComponentUpdateFlag::OnlyTickPoseWhenRendered;
 	FirstPersonMesh->bOnlyOwnerSee = true;
 	FirstPersonMesh->bReceivesDecals = false;
 	FirstPersonMesh->RelativeRotation = FRotator{ 0.f, -90.f, -5.f };
@@ -105,9 +107,15 @@ bool ABSCharacter::IsRunning() const
 	return bIsRunning;
 }
 
+bool ABSCharacter::CanRun() const
+{
+	return !GetMovementComponent()->IsFalling();
+}
+
 void ABSCharacter::SetRunning(bool bNewRunning)
 {
-	if (bIsRunning != bNewRunning)
+	if (bIsRunning != bNewRunning &&
+		(!bNewRunning || CanRun()))
 	{
 		bIsRunning = bNewRunning;
 
@@ -229,22 +237,33 @@ void ABSCharacter::Crouch(bool bClientSimulation /*= false*/)
 
 void ABSCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
-	// Save eye height so we can lerp to new location following start crouch.
-	LastEyeHeight = FirstPersonCamera->RelativeLocation.Z + HalfHeightAdjust;
-
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 
-	FirstPersonCamera->SetRelativeLocation(FVector{0.f, 0.f, LastEyeHeight });
+	// Save eye height so we can lerp to new location following start crouch.
+	FVector NewCameraLocation = FirstPersonCamera->RelativeLocation;
+	NewCameraLocation.Z += HalfHeightAdjust;
+
+	LastEyeHeight = NewCameraLocation.Z;
+	FirstPersonCamera->SetRelativeLocation(NewCameraLocation);
 }
 
 void ABSCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
-	// Save eye height so we can lerp to new location following start crouch.
-	LastEyeHeight = FirstPersonCamera->RelativeLocation.Z - HalfHeightAdjust;
-
 	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 
-	FirstPersonCamera->SetRelativeLocation(FVector{ 0.f, 0.f, LastEyeHeight });
+	// Save eye height so we can lerp to new location following start crouch.
+	FVector NewCameraLocation = FirstPersonCamera->RelativeLocation;
+	NewCameraLocation.Z -= HalfHeightAdjust;
+
+	LastEyeHeight = NewCameraLocation.Z;
+	FirstPersonCamera->SetRelativeLocation(NewCameraLocation);
+}
+
+void ABSCharacter::Jump()
+{
+	SetRunning(false);
+
+	Super::Jump();
 }
 
 bool ABSCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) const

@@ -5,6 +5,7 @@
 #include "BSCharacter.h"
 #include "Weapons/BSWeapon.h"
 #include "Camera/PlayerCameraManager.h"
+#include "BSHUD.h"
 
 ABSPlayerController::ABSPlayerController()
 	: Super()
@@ -31,6 +32,14 @@ void ABSPlayerController::PawnPendingDestroy(APawn* inPawn)
 	Super::PawnPendingDestroy(inPawn);
 
 	ClientSetSpectatorCamera(DeathLocation, CameraRotation);
+}
+
+void ABSPlayerController::NotifyWeaponHit()
+{
+	if (ABSHUD* HUD = Cast<ABSHUD>(GetHUD()))
+	{
+		HUD->NotifyWeaponHit();
+	}
 }
 
 void ABSPlayerController::ClientSetSpectatorCamera_Implementation(const FVector CameraLocation, const FRotator CameraRotation)

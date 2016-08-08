@@ -81,7 +81,6 @@ void UBSInstantShot::PlayImpactEffects(const FHitResult& Hit) const
 void UBSInstantShot::RespondValidHit(const FShotData& ShotData)
 {
 	ABSWeapon* const Weapon = GetWeapon();
-
 	const FVector End = (ShotData.bImpactNeeded) ? ShotData.Impact.ImpactPoint : ShotData.Start + ShotData.Direction * MAX_SHOT_RANGE;
 
 	// #bstodo Do damage on server
@@ -109,6 +108,13 @@ void UBSInstantShot::RespondValidHit(const FShotData& ShotData)
 			PlayImpactEffects(ShotData.Impact);
 
 		PlayTrailEffects(Weapon->GetFireLocation(), End);
+	}
+
+	// Notify weapon if we hit a character
+	const bool bHitCharacter = (ShotData.bImpactNeeded && Cast<ABSCharacter>(ShotData.Impact.Actor.Get()) != nullptr);
+	if (bHitCharacter)
+	{
+		Weapon->OnShotHit();
 	}
 }
 

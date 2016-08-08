@@ -141,6 +141,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	float GetCurrentSpread() const;
 
+	/**
+	* Called when a shot from this weapon has hit a character.
+	*/
+	virtual void OnShotHit();
+
 	/** AActor interface */
 	virtual void PostInitProperties() override;
 	virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;

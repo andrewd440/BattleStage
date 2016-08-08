@@ -9,6 +9,7 @@
 #include "Weapons/BSShotType.h"
 #include "Weapons/BSWeapon.h"
 #include "Engine/ActorChannel.h"
+#include "BSPlayerController.h"
 
 ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -18,10 +19,12 @@ ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 	// First person weapon mesh
 	MeshFP = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshFP"));
 	MeshFP->SetCollisionProfileName("CharacterMesh");
-	MeshFP->SetCastShadow(false);
+	MeshFP->SetCastShadow(true);
+	MeshFP->bSelfShadowOnly = true;
 	MeshFP->bDisableClothSimulation = true;
 	MeshFP->bReceivesDecals = false;
 	MeshFP->bOnlyOwnerSee = true;
+	MeshFP->bRenderCustomDepth = true;
 	RootComponent = MeshFP;
 
 	// Third person weapon mesh
@@ -165,6 +168,20 @@ float ABSWeapon::GetCurrentSpread() const
 	const float StandingSpread = BSCharacter->bIsCrouched ? 0.f : WeaponStats.SpreadIncrementStanding;
 
 	return WeaponStats.BaseSpread + MovementSpread + StandingSpread;
+}
+
+void ABSWeapon::OnShotHit()
+{
+	// Notify controller of hit if local
+	if (BSCharacter->IsFirstPerson())
+	{
+		ABSPlayerController* Controller = Cast<ABSPlayerController>(BSCharacter->GetController());
+
+		if (Controller)
+		{
+			Controller->NotifyWeaponHit();
+		}
+	}
 }
 
 UAnimMontage* ABSWeapon::GetWeaponMontage(const FWeaponAnim& WeaponAnim)

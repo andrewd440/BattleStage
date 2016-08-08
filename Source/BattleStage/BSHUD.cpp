@@ -4,5 +4,7 @@
 #include "BSHUD.h"
 
 
-
-
+void ABSHUD::NotifyWeaponHit()
+{
+	OnNotifyWeaponHit.Broadcast();
+}
