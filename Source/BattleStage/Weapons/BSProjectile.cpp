@@ -50,7 +50,16 @@ void ABSProjectile::OnImpact(const FHitResult& Hit)
 		TArray<AActor*> ToIgnore;
 		ToIgnore.Add(this);
 
-		UGameplayStatics::ApplyRadialDamageWithFalloff(this, Damage.BaseDamage, Damage.MinimumDamage, GetActorLocation(), Damage.InnerRadius, Damage.OuterRadius, Damage.DamageFalloff, DamageTypeClass, ToIgnore);
+		bool bDamagedActor = UGameplayStatics::ApplyRadialDamageWithFalloff(this, Damage.BaseDamage, Damage.MinimumDamage, GetActorLocation(), Damage.InnerRadius, Damage.OuterRadius, Damage.DamageFalloff, DamageTypeClass, ToIgnore);
+
+		// Notify controller of weapon hit
+		//if (bDamagedActor)
+		//{
+		//	if (ABSPlayerController* Controller = Cast<ABSPlayerController>(GetInstigator()))
+		//	{
+		//		Controller->NotifyWeaponHit();
+		//	}
+		//}
 
 		Destroy();
 	}

@@ -56,8 +56,8 @@ void ABSWeapon::PostInitProperties()
 {
 	Super::PostInitProperties();
 
-	RemainingClip = WeaponStats.ClipSize;
-	RemainingAmmo = WeaponStats.MaxAmmo - RemainingClip;
+	RemainingClip = FMath::Min(WeaponStats.ClipSize, WeaponStats.MaxAmmo);
+	RemainingAmmo = FMath::Max(WeaponStats.MaxAmmo - RemainingClip, 0);
 }
 
 bool ABSWeapon::ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
@@ -226,7 +226,10 @@ void ABSWeapon::SetWeaponState(EWeaponState State)
 				if (CanReload())
 					State = EWeaponState::Reloading;
 				else
+				{
 					State = EWeaponState::Active;
+					PlayEmptyClipSequence();
+				}
 			}
 			break;
 		case EWeaponState::Reloading:
@@ -243,6 +246,7 @@ void ABSWeapon::SetWeaponState(EWeaponState State)
 			break;
 		}
 
+		// Make sure the weapon state is really changing
 		if(WeaponState != State)
 			HandleNewWeaponState(State);
 	}
@@ -324,19 +328,7 @@ void ABSWeapon::ServerHandleNewWeaponState_Implementation(const EWeaponState Sta
 
 bool ABSWeapon::ServerHandleNewWeaponState_Validate(const EWeaponState State)
 {
-	bool bIsValid = true;
-
-	switch (State)
-	{
-	case EWeaponState::Firing:
-		bIsValid = CanFire();
-		break;
-	case EWeaponState::Reloading:
-		bIsValid = CanReload();
-		break;
-	}
-
-	return bIsValid;
+	return true;
 }
 
 void ABSWeapon::ClientEnteredFiringState_Implementation()
@@ -381,6 +373,7 @@ void ABSWeapon::FireShot()
 	else
 	{
 		SetWeaponState(EWeaponState::Active);
+		PlayEmptyClipSequence();
 	}
 }
 
@@ -412,6 +405,7 @@ void ABSWeapon::InvokeShot(const FShotData& ShotData)
 		else
 		{
 			SetWeaponState(EWeaponState::Active);
+			PlayEmptyClipSequence();
 		}
 	}
 }
@@ -451,6 +445,14 @@ void ABSWeapon::PlayEndFireSequence()
 	if (EndFireSound)
 	{
 		UGameplayStatics::SpawnSoundAttached(EndFireSound, RootComponent);
+	}
+}
+
+void ABSWeapon::PlayEmptyClipSequence()
+{
+	if (EmptyClipSound)
+	{
+		UGameplayStatics::SpawnSoundAttached(EmptyClipSound, RootComponent);
 	}
 }
 

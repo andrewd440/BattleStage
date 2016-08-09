@@ -162,13 +162,6 @@ protected:
 	void InvokeShot(const FShotData& ShotData);
 
 	/**
-	* Only called on the server. Notifies the weapon that a shot has been fired
-	* and to activate any unnecessary events.
-	*/
-	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerInvokeShot(const FShotData& ShotData);
-
-	/**
 	* Starts the equip sequence. Activates effects that should be played on clients, 
 	* animations, sounds, etc.
 	* @return The length of the sequence in seconds. If <0, OnEquipFinished will
@@ -203,6 +196,12 @@ protected:
 	* animations, sounds, etc.
 	*/
 	virtual void PlayEndFireSequence();
+
+	/**
+	* Plays sequence that occurs when a attempt to fire that weapon has been made, but the
+	* weapon is out of ammo.
+	*/
+	virtual void PlayEmptyClipSequence();
 
 	//-----------------------------------------------------------------
 	// Weapon state transitions
@@ -247,6 +246,15 @@ protected:
 	* should be transitioned to the Inactive state.
 	*/
 	virtual void OnUnquipFinished();
+
+
+private:
+	/**
+	* Only called on the server. Notifies the weapon that a shot has been fired
+	* and to activate any unnecessary events.
+	*/
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerInvokeShot(const FShotData& ShotData);
 
 protected:
 	// The character that has this weapon equipped. 
@@ -336,6 +344,10 @@ protected:
 	// Weapon Sounds
 	//-----------------------------------------------------------------
 	
+	// Spawned component used to play FireSound and manipulate looping sounds.
+	UPROPERTY(Transient)
+	UAudioComponent* FireSoundComponent = nullptr;
+
 	// Sound effect on weapon begin fire
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Sound)
 	USoundBase* BeginFireSound = nullptr;
@@ -344,13 +356,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Sound)
 	USoundBase* FireSound = nullptr;
 
-	// Spawned component used to play FireSound and manipulate looping sounds.
-	UPROPERTY(Transient)
-	UAudioComponent* FireSoundComponent = nullptr;
-
 	// Sound effect on weapon end fire
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Sound)
 	USoundBase* EndFireSound = nullptr;
+
+	// Sound effect on weapon fire with empty clip
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Sound)
+	USoundBase* EmptyClipSound = nullptr;
 
 	//-----------------------------------------------------------------
 	// Weapon Animation 
