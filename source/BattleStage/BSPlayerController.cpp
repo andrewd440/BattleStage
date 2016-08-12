@@ -36,9 +36,27 @@ void ABSPlayerController::PawnPendingDestroy(APawn* inPawn)
 
 void ABSPlayerController::NotifyWeaponHit()
 {
+	ClientNotifyWeaponHit();
+}
+
+void ABSPlayerController::ClientNotifyWeaponHit_Implementation()
+{
 	if (ABSHUD* HUD = Cast<ABSHUD>(GetHUD()))
 	{
 		HUD->NotifyWeaponHit();
+	}
+}
+
+void ABSPlayerController::NotifyRecievedDamage(const FVector& SourcePosition)
+{
+	ClientNotifyRecievedDamage(SourcePosition);
+}
+
+void ABSPlayerController::ClientNotifyRecievedDamage_Implementation(FVector SourcePosition)
+{
+	if (ABSHUD* HUD = Cast<ABSHUD>(GetHUD()))
+	{
+		HUD->NotifyReceivedDamage(SourcePosition);
 	}
 }
 

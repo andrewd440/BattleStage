@@ -170,20 +170,6 @@ float ABSWeapon::GetCurrentSpread() const
 	return WeaponStats.BaseSpread + MovementSpread + StandingSpread;
 }
 
-void ABSWeapon::OnShotHit()
-{
-	// Notify controller of hit if local
-	if (BSCharacter->IsFirstPerson())
-	{
-		ABSPlayerController* Controller = Cast<ABSPlayerController>(BSCharacter->GetController());
-
-		if (Controller)
-		{
-			Controller->NotifyWeaponHit();
-		}
-	}
-}
-
 UAnimMontage* ABSWeapon::GetWeaponMontage(const FWeaponAnim& WeaponAnim)
 {
 	return (BSCharacter->IsFirstPerson()) ? WeaponAnim.FirstPerson : WeaponAnim.ThirdPerson;

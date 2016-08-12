@@ -32,8 +32,24 @@ public:
 
 	/**
 	* Notifies the controller it has hit a character with a weapon under the control of the it's pawn.
+	* Results in a RPC on the client that notifies a weapon hit.
 	*/
 	virtual void NotifyWeaponHit();
+
+	/**
+	* Notifies the controller that the controlled character has received damage in game.
+	* Results in a RPC on the client that notifies damage receieved.
+	*
+	* @param SourcePosition	The world position of the source of the damage.
+	*/
+	virtual void NotifyRecievedDamage(const FVector& SourcePosition);
+
+protected:
+	UFUNCTION(Client, Unreliable)
+	void ClientNotifyWeaponHit();
+
+	UFUNCTION(Client, Unreliable)
+	void ClientNotifyRecievedDamage(FVector SourcePosition);
 
 protected:
 	/** Handles moving forward/backward */

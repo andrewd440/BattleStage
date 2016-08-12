@@ -10,6 +10,7 @@
 #include "UnrealNetwork.h"
 #include "GameModes/BSGameMode.h"
 #include "BSCharacterMovementComponent.h"
+#include "BSPlayerController.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
@@ -59,6 +60,8 @@ void ABSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(ABSCharacter, Weapon);
 	DOREPLIFETIME(ABSCharacter, bIsDying);
 	DOREPLIFETIME_CONDITION(ABSCharacter, bIsRunning, COND_SkipOwner);
+	DOREPLIFETIME(ABSCharacter, Health);
+	DOREPLIFETIME(ABSCharacter, ReceiveHitInfo);
 }
 
 float ABSCharacter::GetAimSpread() const
@@ -333,11 +336,27 @@ void ABSCharacter::OnRep_IsDying()
 
 void ABSCharacter::TakeHit(const float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	SetRecieveHitInfo(Damage, DamageEvent);
+	SetRecieveHitInfo(Damage, DamageEvent, DamageCauser);
 
 	ApplyDamageMomentum(Damage, DamageEvent, nullptr, DamageCauser);
 	
-	OnRecieveHit();
+	if(GetNetMode() != NM_DedicatedServer)
+		OnRecieveHit();
+
+	if (DamageCauser)
+	{
+		// Notify received damage on controller
+		if (ABSPlayerController* DamagedController = Cast<ABSPlayerController>(GetController()))
+		{
+			DamagedController->NotifyRecievedDamage(DamageCauser->GetActorLocation());
+		}
+
+		// Notify hit if for controller that caused damage		
+		if (ABSPlayerController* InstigatorController = Cast<ABSPlayerController>(EventInstigator))
+		{
+			InstigatorController->NotifyWeaponHit();
+		}
+	}
 }
 
 void ABSCharacter::UpdateViewTarget(const float DeltaSeconds)
@@ -357,20 +376,21 @@ void ABSCharacter::UpdateViewTarget(const float DeltaSeconds)
 	}
 }
 
-void ABSCharacter::SetRecieveHitInfo(const float Damage, FDamageEvent const& DamageEvent)
+void ABSCharacter::SetRecieveHitInfo(const float Damage, FDamageEvent const& DamageEvent, AActor* DamageCauser)
 {
 	// Set direction based on damage event type
-	if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
-	{
-		const FPointDamageEvent& PointDamageEvent = static_cast<const FPointDamageEvent&>(DamageEvent);
-		ReceiveHitInfo.Direction = PointDamageEvent.ShotDirection;
-	}
-	else if (DamageEvent.IsOfType(FRadialDamageEvent::ClassID))
-	{
-		const FRadialDamageEvent& RadialDamageEvent = static_cast<const FRadialDamageEvent&>(DamageEvent);
-		ReceiveHitInfo.Direction = (RadialDamageEvent.Origin - GetActorLocation()).GetSafeNormal();
-	}
+	//if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
+	//{
+	//	const FPointDamageEvent& PointDamageEvent = static_cast<const FPointDamageEvent&>(DamageEvent);
+	//	ReceiveHitInfo.Location = PointDamageEvent.ShotDirection;
+	//}
+	//else if (DamageEvent.IsOfType(FRadialDamageEvent::ClassID))
+	//{
+	//	const FRadialDamageEvent& RadialDamageEvent = static_cast<const FRadialDamageEvent&>(DamageEvent);
+	//	ReceiveHitInfo.Location = (RadialDamageEvent.Origin - GetActorLocation()).GetSafeNormal();
+	//}
 
+	ReceiveHitInfo.DamageCauser = DamageCauser;
 	ReceiveHitInfo.Damage = Damage;
 }
 

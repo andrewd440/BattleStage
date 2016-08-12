@@ -40,7 +40,8 @@ bool UBSInstantShot::GetShotData(FShotData& OutShotData) const
 void UBSInstantShot::PreInvokeShot(const FShotData& ShotData)
 {
 	// Play hit locally
-	RespondValidHit(ShotData);
+	const FVector Target = (ShotData.bImpactNeeded) ? ShotData.Impact.ImpactPoint : ShotData.Start + ShotData.Direction * MAX_SHOT_RANGE;
+	SimulateFire(Target);
 }
 
 void UBSInstantShot::InvokeShot(const FShotData& ShotData)
@@ -104,17 +105,7 @@ void UBSInstantShot::RespondValidHit(const FShotData& ShotData)
 	// Play local effects
 	if (Weapon->GetNetMode() != NM_DedicatedServer)
 	{
-		if(ShotData.bImpactNeeded)
-			PlayImpactEffects(ShotData.Impact);
-
-		PlayTrailEffects(Weapon->GetFireLocation(), End);
-	}
-
-	// Notify weapon if we hit a character
-	const bool bHitCharacter = (ShotData.bImpactNeeded && Cast<ABSCharacter>(ShotData.Impact.Actor.Get()) != nullptr);
-	if (bHitCharacter)
-	{
-		Weapon->OnShotHit();
+		SimulateFire(End);
 	}
 }
 

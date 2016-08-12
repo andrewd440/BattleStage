@@ -13,14 +13,18 @@ class ABSWeapon;
 USTRUCT()
 struct FReceiveHitInfo
 {
-	GENERATED_BODY()
+	GENERATED_USTRUCT_BODY()
+
+	/** Actor responsible for the hit */
+	UPROPERTY()
+	AActor* DamageCauser;
 
 	UPROPERTY()
 	float Damage;
 
 	/** Direction the hit came from. */
-	UPROPERTY()
-	FVector_NetQuantizeNormal Direction;
+	//UPROPERTY()
+	//FVector_NetQuantizeNormal Direction;
 };
 
 UCLASS(config=Game)
@@ -77,6 +81,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Health)
 	bool CanDie() const;
 
+	UFUNCTION(BlueprintCallable, Category = Health)
+	int32 GetHealth() const;
+
 	/** ACharacter Interface Begin */
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void Tick(float DeltaSeconds) override;
@@ -116,7 +123,8 @@ protected:
 
 	/**
 	* Called when the player is hit by a damage event, i.e. bullet, projectile, explosion, etc.
-	* Responds to hit event using data in ReceiveHitInfo.
+	* Responds to hit event using data in ReceiveHitInfo. Should only invoke cosmetic events,
+	* animations, HUD effects, audio, etc.
 	*/
 	UFUNCTION(BlueprintNativeEvent, Category = Character)
 	void OnRecieveHit();
@@ -186,7 +194,7 @@ private:
 	UFUNCTION()
 	void OnRep_IsDying();
 
-	void SetRecieveHitInfo(const float Damage, FDamageEvent const& DamageEvent);
+	void SetRecieveHitInfo(const float Damage, FDamageEvent const& DamageEvent, AActor* Instigator);
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerSetRunning(bool bNewRunning);
@@ -212,3 +220,7 @@ public:
 	FORCEINLINE ABSWeapon* GetEquippedWeapon() const { return Weapon; }
 };
 
+FORCEINLINE int32 ABSCharacter::GetHealth() const
+{
+	return Health;
+}

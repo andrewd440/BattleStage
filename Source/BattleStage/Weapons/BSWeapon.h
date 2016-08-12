@@ -141,11 +141,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	float GetCurrentSpread() const;
 
-	/**
-	* Called when a shot from this weapon has hit a character.
-	*/
-	virtual void OnShotHit();
-
 	/** AActor interface */
 	virtual void PostInitProperties() override;
 	virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
@@ -352,7 +347,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Sound)
 	USoundBase* BeginFireSound = nullptr;
 
-	// Sound effect when the weapon is fire
+	// Sound effect when the weapon is fire. This audio will loop while in the
+	// firing weapon state if it is a looping sound. Otherwise, it will be played
+	// at the time of each shot. For automatic weapons, it is recommended to use
+	// looping firing sounds.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Sound)
 	USoundBase* FireSound = nullptr;
 
