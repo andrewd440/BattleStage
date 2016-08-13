@@ -42,14 +42,14 @@ public:
 	*
 	* @param SourcePosition	The world position of the source of the damage.
 	*/
-	virtual void NotifyRecievedDamage(const FVector& SourcePosition);
+	virtual void NotifyReceivedDamage(const FVector& SourcePosition);
 
 protected:
 	UFUNCTION(Client, Unreliable)
 	void ClientNotifyWeaponHit();
 
 	UFUNCTION(Client, Unreliable)
-	void ClientNotifyRecievedDamage(FVector SourcePosition);
+	void ClientNotifyReceivedDamage(const FVector& SourcePosition);
 
 protected:
 	/** Handles moving forward/backward */
@@ -89,6 +89,10 @@ protected:
 	/* The base look rate of the player **/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Controller)
 	float BaseLookRate;
+
+	/** Camera shake used when damage taken */
+	UPROPERTY(EditDefaultsOnly, Category = Controller)
+	TSubclassOf<UCameraShake> HitCameraShake;
 
 private:
 	ABSCharacter* BSCharacter; //< If valid, the owning BSCharacter

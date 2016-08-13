@@ -10,7 +10,7 @@
 ABSHUD::ABSHUD(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	LastWeaponHitTime = -MAX_FLT;
+	LastWeaponHitTime = LastDamagedTime = -MAX_FLT;
 }
 
 void ABSHUD::NotifyWeaponHit()

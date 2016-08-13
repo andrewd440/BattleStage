@@ -47,16 +47,21 @@ void ABSPlayerController::ClientNotifyWeaponHit_Implementation()
 	}
 }
 
-void ABSPlayerController::NotifyRecievedDamage(const FVector& SourcePosition)
+void ABSPlayerController::NotifyReceivedDamage(const FVector& SourcePosition)
 {
-	ClientNotifyRecievedDamage(SourcePosition);
+	ClientNotifyReceivedDamage(SourcePosition);
 }
 
-void ABSPlayerController::ClientNotifyRecievedDamage_Implementation(FVector SourcePosition)
+void ABSPlayerController::ClientNotifyReceivedDamage_Implementation(const FVector& SourcePosition)
 {
 	if (ABSHUD* HUD = Cast<ABSHUD>(GetHUD()))
 	{
 		HUD->NotifyReceivedDamage(SourcePosition);
+	}
+
+	if (HitCameraShake)
+	{
+		PlayerCameraManager->PlayCameraShake(HitCameraShake);
 	}
 }
 

@@ -16,15 +16,34 @@ struct FReceiveHitInfo
 	GENERATED_USTRUCT_BODY()
 
 	/** Actor responsible for the hit */
-	UPROPERTY()
-	AActor* DamageCauser;
+	UPROPERTY(BlueprintReadOnly, Category = RecieveHitInfo)
+	TWeakObjectPtr<AActor> DamageCauser;
 
-	UPROPERTY()
+	/** Damage that was received */
+	UPROPERTY(BlueprintReadOnly, Category = RecieveHitInfo)
 	float Damage;
 
-	/** Direction the hit came from. */
-	//UPROPERTY()
-	//FVector_NetQuantizeNormal Direction;
+	/** Bone that was hit */
+	UPROPERTY(BlueprintReadOnly, Category = RecieveHitInfo)
+	FName HitBone;
+
+	/** Bone that was hit */
+	UPROPERTY(BlueprintReadOnly, Category = RecieveHitInfo)
+	FVector_NetQuantize10 HitLocation;
+
+	/** Bone that was hit */
+	UPROPERTY(BlueprintReadOnly, Category = RecieveHitInfo)
+	FVector_NetQuantizeNormal HitDirection;
+
+	/** Forces hit info to replicate */
+	void ForceReplication()
+	{
+		++ForceReplicateByte;
+	}
+
+private:
+	UPROPERTY()
+	uint8 ForceReplicateByte;
 };
 
 UCLASS(config=Game)
@@ -127,7 +146,7 @@ protected:
 	* animations, HUD effects, audio, etc.
 	*/
 	UFUNCTION(BlueprintNativeEvent, Category = Character)
-	void OnRecieveHit();
+	void OnReceiveHit();
 
 	void EnableRagdollPhysics();
 
@@ -157,14 +176,20 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_IsDying)
 	uint32 bIsDying : 1;
 
-	UPROPERTY(BlueprintReadOnly, Transient, ReplicatedUsing = OnRecieveHit)
+	UPROPERTY(BlueprintReadOnly, Transient, ReplicatedUsing = OnReceiveHit)
 	FReceiveHitInfo ReceiveHitInfo;
 
 	//-----------------------------------------------------------------
 	// Animations
 	//-----------------------------------------------------------------
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Character)
+	
+	/** Animation played on death on third person mesh */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation)
 	UAnimMontage* DeathAnim = nullptr;
+
+	/** Bone to set in RecieveHitInfo when hit with radial damage */
+	UPROPERTY(EditDefaultsOnly, Category = Animation)
+	FName RadialDamageImpactBone;
 
 private:
 	UFUNCTION(BlueprintCallable, Category = Weapon)
@@ -194,7 +219,7 @@ private:
 	UFUNCTION()
 	void OnRep_IsDying();
 
-	void SetRecieveHitInfo(const float Damage, FDamageEvent const& DamageEvent, AActor* Instigator);
+	void SetReceiveHitInfo(const float Damage, FDamageEvent const& DamageEvent, AActor* Instigator);
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerSetRunning(bool bNewRunning);

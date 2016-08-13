@@ -334,31 +334,6 @@ void ABSCharacter::OnRep_IsDying()
 	OnDeath();
 }
 
-void ABSCharacter::TakeHit(const float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
-{
-	SetRecieveHitInfo(Damage, DamageEvent, DamageCauser);
-
-	ApplyDamageMomentum(Damage, DamageEvent, nullptr, DamageCauser);
-	
-	if(GetNetMode() != NM_DedicatedServer)
-		OnRecieveHit();
-
-	if (DamageCauser)
-	{
-		// Notify received damage on controller
-		if (ABSPlayerController* DamagedController = Cast<ABSPlayerController>(GetController()))
-		{
-			DamagedController->NotifyRecievedDamage(DamageCauser->GetActorLocation());
-		}
-
-		// Notify hit if for controller that caused damage		
-		if (ABSPlayerController* InstigatorController = Cast<ABSPlayerController>(EventInstigator))
-		{
-			InstigatorController->NotifyWeaponHit();
-		}
-	}
-}
-
 void ABSCharacter::UpdateViewTarget(const float DeltaSeconds)
 {
 	if (FMath::Abs(LastEyeHeight - BaseEyeHeight) > 0.01f)
@@ -376,25 +351,63 @@ void ABSCharacter::UpdateViewTarget(const float DeltaSeconds)
 	}
 }
 
-void ABSCharacter::SetRecieveHitInfo(const float Damage, FDamageEvent const& DamageEvent, AActor* DamageCauser)
+void ABSCharacter::TakeHit(const float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	// Set direction based on damage event type
-	//if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
-	//{
-	//	const FPointDamageEvent& PointDamageEvent = static_cast<const FPointDamageEvent&>(DamageEvent);
-	//	ReceiveHitInfo.Location = PointDamageEvent.ShotDirection;
-	//}
-	//else if (DamageEvent.IsOfType(FRadialDamageEvent::ClassID))
-	//{
-	//	const FRadialDamageEvent& RadialDamageEvent = static_cast<const FRadialDamageEvent&>(DamageEvent);
-	//	ReceiveHitInfo.Location = (RadialDamageEvent.Origin - GetActorLocation()).GetSafeNormal();
-	//}
+	SetReceiveHitInfo(Damage, DamageEvent, DamageCauser);
 
-	ReceiveHitInfo.DamageCauser = DamageCauser;
-	ReceiveHitInfo.Damage = Damage;
+	//ApplyDamageMomentum(Damage, DamageEvent, nullptr, DamageCauser);
+	
+	if(GetNetMode() != NM_DedicatedServer)
+		OnReceiveHit();
+
+	if (DamageCauser)
+	{
+		// Notify received damage on controller
+		if (ABSPlayerController* DamagedController = Cast<ABSPlayerController>(GetController()))
+		{
+			DamagedController->NotifyReceivedDamage(DamageCauser->GetActorLocation());
+		}
+
+		// Notify hit if for controller that caused damage		
+		if (ABSPlayerController* InstigatorController = Cast<ABSPlayerController>(EventInstigator))
+		{
+			InstigatorController->NotifyWeaponHit();
+		}
+	}
 }
 
-void ABSCharacter::OnRecieveHit_Implementation()
+void ABSCharacter::SetReceiveHitInfo(const float Damage, const FDamageEvent& DamageEvent, AActor* DamageCauser)
+{
+	// Set hit bone based on damage event type
+	if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
+	{
+		const FPointDamageEvent& PointDamageEvent = static_cast<const FPointDamageEvent&>(DamageEvent);
+
+		FHitResult Hit;
+		FVector UnusedImpulseDirection;
+		PointDamageEvent.GetBestHitInfo(this, DamageCauser, Hit, UnusedImpulseDirection);
+
+		ReceiveHitInfo.HitLocation = Hit.ImpactPoint;
+		ReceiveHitInfo.HitBone = Hit.BoneName;
+		ReceiveHitInfo.HitDirection = PointDamageEvent.ShotDirection;
+	}
+	else if (DamageEvent.IsOfType(FRadialDamageEvent::ClassID))
+	{
+		// For radial, always set spine as bone
+		ReceiveHitInfo.HitBone = RadialDamageImpactBone;
+
+		const FRadialDamageEvent& RadialDamageEvent = static_cast<const FRadialDamageEvent&>(DamageEvent);
+		ReceiveHitInfo.HitLocation = RadialDamageEvent.Origin;
+		ReceiveHitInfo.HitDirection = (GetActorLocation() - RadialDamageEvent.Origin).GetSafeNormal();
+	}
+
+	ReceiveHitInfo.DamageCauser = DamageCauser;
+	ReceiveHitInfo.Damage = ReceiveHitInfo.Damage;
+
+	ReceiveHitInfo.ForceReplication();
+}
+
+void ABSCharacter::OnReceiveHit_Implementation()
 {
 
 }
