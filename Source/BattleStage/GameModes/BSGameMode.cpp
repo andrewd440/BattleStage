@@ -2,11 +2,11 @@
 
 #include "BattleStage.h"
 #include "BSGameMode.h"
-#include "BSCharacter.h"
-#include "BSPlayerController.h"
+#include "Player/BSCharacter.h"
+#include "Player/BSPlayerController.h"
 #include "BSGameState.h"
-#include "BSPlayerState.h"
-#include "BSHUD.h"
+#include "Player/BSPlayerState.h"
+#include "UI/BSHUD.h"
 #include "Online/BSGameSession.h"
 
 DEFINE_LOG_CATEGORY_STATIC(BSGameMode, Warning, All);

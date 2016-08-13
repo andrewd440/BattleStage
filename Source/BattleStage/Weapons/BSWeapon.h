@@ -3,7 +3,7 @@
 #pragma once
 
 #include "GameFramework/Actor.h"
-#include "BSCharacter.h"
+#include "Player/BSCharacter.h"
 #include "Weapons/BSShotType.h"
 #include "BSWeapon.generated.h"
 
