@@ -40,6 +40,7 @@ ABSCharacter::ABSCharacter(const FObjectInitializer& ObjectInitializer)
 	USkeletalMeshComponent* Mesh = GetMesh();
 	Mesh->SetupAttachment(GetCapsuleComponent());
 	Mesh->bOwnerNoSee = true;
+	Mesh->MeshComponentUpdateFlag = EMeshComponentUpdateFlag::OnlyTickPoseWhenRendered;
 	Mesh->bReceivesDecals = false;
 	Mesh->RelativeLocation = FVector{ 0.f, 0.f, -GetCapsuleComponent()->GetScaledCapsuleHalfHeight() };
 	Mesh->RelativeRotation = FRotator{ 0.f, -90.f, 0.f };
