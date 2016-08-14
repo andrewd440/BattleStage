@@ -4,11 +4,13 @@
 #include "BSGameInstance.h"
 #include "Online/BSGameSession.h"
 #include "BSTypes.h"
+#include "BSMatchConfig.h"
 
 UBSGameInstance::UBSGameInstance(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 	, bIsOnline(true)
 {
+	MatchConfigClass = UBSMatchConfig::StaticClass();
 }
 
 void UBSGameInstance::SetIsOnline(const bool IsOnline)
@@ -52,10 +54,12 @@ bool UBSGameInstance::HostSession(ULocalPlayer* LocalPlayer, const FString& InTr
 		const bool bIsLan = UGameplayStatics::HasOption(Options, TravelURLKeys::IsLanMatch);
 		const FString GameType = UGameplayStatics::ParseOption(Options, TravelURLKeys::GameType);
 
+		const int32 MaxPlayers = UGameplayStatics::GetIntOption(Options, TravelURLKeys::MaxPlayers, ABSGameSession::DEFAULT_MAX_PLAYERS);
+
 		// Set delegate and attempt to create the session
 		OnHostSessionCreatedHandle = GameSession->OnSessionCreated().AddUObject(this, &UBSGameInstance::OnHostSessionCreated);
 
-		bWasSuccessful = GameSession->CreateSession(LocalPlayer, GameSessionName, ABSGameSession::DEFAULT_MAX_PLAYERS, bIsLan, GameType, MapName);
+		bWasSuccessful = GameSession->CreateSession(LocalPlayer, GameSessionName, MaxPlayers, bIsLan, GameType, MapName);
 	}
 
 	return bWasSuccessful;

@@ -8,6 +8,7 @@
 #include "Player/BSPlayerState.h"
 #include "UI/BSHUD.h"
 #include "Online/BSGameSession.h"
+#include "BSTypes.h"
 
 DEFINE_LOG_CATEGORY_STATIC(BSGameMode, Warning, All);
 
@@ -42,10 +43,13 @@ void ABSGameMode::InitGame(const FString& MapName, const FString& Options, FStri
 {
 	Super::InitGame(MapName, Options, ErrorMessage);
 
-	TimeLimit = FMath::Max(0, UGameplayStatics::GetIntOption(Options, TEXT("TimeLimit"), TimeLimit));
+	MinPlayers = UGameplayStatics::GetIntOption(Options, TravelURLKeys::MinPlayers, 2);
+	MaxPlayers = UGameplayStatics::GetIntOption(Options, TravelURLKeys::MaxPlayers, ABSGameSession::DEFAULT_MAX_PLAYERS);
+
+	TimeLimit = FMath::Max(0, UGameplayStatics::GetIntOption(Options, TravelURLKeys::TimeLimit, 1));
 	TimeLimit *= 60; // Convert minutes to seconds
 
-	ScoreGoal = FMath::Max(0, UGameplayStatics::GetIntOption(Options, TEXT("ScoreGoal"), ScoreGoal));
+	ScoreGoal = FMath::Max(0, UGameplayStatics::GetIntOption(Options, TravelURLKeys::ScoreGoal, 10));
 }
 
 void ABSGameMode::InitGameState()

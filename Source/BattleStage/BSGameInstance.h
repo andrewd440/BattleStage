@@ -9,7 +9,7 @@
 /**
  * 
  */
-UCLASS()
+UCLASS(Abstract)
 class BATTLESTAGE_API UBSGameInstance : public UGameInstance
 {
 	GENERATED_UCLASS_BODY()
@@ -45,6 +45,9 @@ protected:
 	/** Travel url held during async network operations */
 	FString TravelURL;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = GameInstance)
+	TSubclassOf<class UBSMatchConfig> MatchConfigClass;
+
 private:
 	class ABSGameSession* GetGameSession() const;
 
@@ -55,4 +58,7 @@ private:
 	FDelegateHandle OnHostSessionCreatedHandle;
 	FDelegateHandle OnFindSessionsCompleteHandle;
 	FDelegateHandle OnJoinSessionCompleteHandle;
+
+public:
+	TSubclassOf<class UBSMatchConfig> GetMatchConfigClass() const { return MatchConfigClass; }
 };

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "UI/Slate/BSUserWidget.h"
+#include "UI/UMG/BSUserWidget.h"
 #include "BSMainMenuWidget.generated.h"
 
 /**
@@ -16,7 +16,7 @@ class BATTLESTAGE_API UBSMainMenuWidget : public UBSUserWidget
 public:
 
 	UFUNCTION(BlueprintCallable, Category = MainMenu)
-	bool HostGame();
+	void OpenHostGameMenu();
 
 	UFUNCTION(BlueprintCallable, Category = MainMenu)
 	void OpenServerBrowser();
@@ -26,19 +26,24 @@ public:
 	
 protected:
 	/** 
-	 * Gets the panel that submenus will be added to for this widget. 
+	 * Gets the panel that sub-menus will be added to for this widget. 
 	 * 
-	 * Should be used by derived classes to specify where to add submenus
+	 * Should be used by derived classes to specify where to add sub-menus
 	 * in the main menu widget.
 	 */
 	UFUNCTION(BlueprintNativeEvent, Category = MainMenu)
-	class UContentWidget* GetSubmenuPanel();
+	class UContentWidget* GetSubMenuPanel();
+
+	void ShowSubMenu(TSubclassOf<UBSUserWidget> MenuType);
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = MainMenu)
 	TSubclassOf<class UBSServerBrowserWidget> ServerBrowserClass;
 
+	UPROPERTY(EditDefaultsOnly, Category = MainMenu)
+	TSubclassOf<class UBSHostGameWidget> HostGameClass;
+
 private:
 	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	class UBSServerBrowserWidget* ServerBrowserWidget = nullptr;
+	class UBSUserWidget* ActiveSubMenu = nullptr;
 };

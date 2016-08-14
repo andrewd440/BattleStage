@@ -30,4 +30,8 @@ namespace TravelURLKeys
 	static const FString MapNamePrefix = TEXT("Game/Maps/");
 	static const FString IsLanMatch = TEXT("bIsLanMatch");
 	static const FString GameType = TEXT("game");
+	static const FString TimeLimit = TEXT("TimeLimit");
+	static const FString ScoreGoal = TEXT("ScoreGoal");
+	static const FString MaxPlayers = TEXT("MaxPlayers");
+	static const FString MinPlayers = TEXT("MinPlayers");
 }

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "UI/Slate/BSUserWidget.h"
+#include "UI/UMG/BSUserWidget.h"
 #include "OnlineSessionSettings.h"
 
 #include "BSServerBrowserWidget.generated.h"
