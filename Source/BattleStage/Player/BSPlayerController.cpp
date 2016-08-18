@@ -6,6 +6,9 @@
 #include "Weapons/BSWeapon.h"
 #include "Camera/PlayerCameraManager.h"
 #include "UI/BSHUD.h"
+#include "UI/UMG/BSUserWidget.h"
+#include "BSGameInstance.h"
+#include "GameModes/BSGameState.h"
 
 ABSPlayerController::ABSPlayerController()
 	: Super()
@@ -52,6 +55,70 @@ void ABSPlayerController::NotifyReceivedDamage(const FVector& SourcePosition)
 	ClientNotifyReceivedDamage(SourcePosition);
 }
 
+void ABSPlayerController::ToggleInGameMenu()
+{
+	const bool bShowMenu = (InGameMenuWidget && InGameMenuWidget->IsVisible()) ? false : true;
+	ShowInGameMenu(bShowMenu);
+}
+
+void ABSPlayerController::ShowInGameMenu(const bool bShowMenu)
+{
+	if (bShowMenu && InGameMenuClass)
+	{
+		if (InGameMenuWidget == nullptr)
+		{
+			InGameMenuWidget = CreateWidget<UBSUserWidget>(this, InGameMenuClass);
+		}
+		
+		if (!InGameMenuWidget->IsInViewport())
+		{
+			InGameMenuWidget->AddToViewport();
+		}
+
+		SetCinematicMode(true, true, true);
+		
+		// Setup input for in-game menu
+		FInputModeGameAndUI InputMode;
+		InputMode.SetLockMouseToViewport(true);
+		InputMode.SetWidgetToFocus(InGameMenuWidget->TakeWidget());
+		InputMode.SetHideCursorDuringCapture(false);
+		SetInputMode(InputMode);
+		bShowMouseCursor = true;
+	}
+	else if (InGameMenuWidget && InGameMenuWidget->IsInViewport())
+	{
+		InGameMenuWidget->RemoveFromParent();		
+		SetCinematicMode(false, true, true);
+
+		// Set input back to game only
+		SetInputMode(FInputModeGameOnly{});
+		bShowMouseCursor = false;
+	}
+}
+
+void ABSPlayerController::HandleReturnToMainMenu()
+{
+	if (ABSGameState* GameState = Cast<ABSGameState>(GetWorld()->GetGameState()))
+	{
+		GameState->QuitGameAndReturnToMainMenu();
+	}
+	else
+	{
+		ClientReturnToMainMenu_Implementation(FString{});
+	}
+}
+
+void ABSPlayerController::ClientReturnToMainMenu_Implementation(const FString& ReturnReason)
+{
+	Super::ClientReturnToMainMenu_Implementation(ReturnReason);
+
+	UBSGameInstance* GameInstance = Cast<UBSGameInstance>(GetGameInstance());
+	if (GameInstance)
+	{
+		GameInstance->GracefullyDestroyOnlineSession();
+	}
+}
+
 void ABSPlayerController::ClientNotifyReceivedDamage_Implementation(const FVector& SourcePosition)
 {
 	if (ABSHUD* HUD = Cast<ABSHUD>(GetHUD()))
@@ -82,7 +149,9 @@ void ABSPlayerController::SetupInputComponent()
 	Super::SetupInputComponent();
 
 	check(InputComponent);
-	
+
+	InputComponent->BindAction("GameMenu", IE_Pressed, this, &ABSPlayerController::ToggleInGameMenu);
+
 	InputComponent->BindAxis("MoveForward", this, &ABSPlayerController::OnMoveForward);
 	InputComponent->BindAxis("MoveRight", this, &ABSPlayerController::OnMoveRight);
 
@@ -128,7 +197,7 @@ void ABSPlayerController::ClientHearSound_Implementation(USoundBase* Sound, AAct
 void ABSPlayerController::OnMoveForward(float Value)
 {
 	APawn* Pawn = GetPawn();
-	if (Pawn && Value != 0.0f)
+	if (Pawn && Value != 0.0f && !IsMoveInputIgnored())
 	{
 		Pawn->AddMovementInput(GetActorForwardVector().GetSafeNormal2D() , Value);
 	}
@@ -137,7 +206,7 @@ void ABSPlayerController::OnMoveForward(float Value)
 void ABSPlayerController::OnMoveRight(float Value)
 {
 	APawn* Pawn = GetPawn();
-	if (Pawn && Value != 0.0f)
+	if (Pawn && Value != 0.0f && !IsMoveInputIgnored())
 	{
 		Pawn->AddMovementInput(GetActorRightVector().GetSafeNormal2D(), Value);
 	}
@@ -146,7 +215,7 @@ void ABSPlayerController::OnMoveRight(float Value)
 void ABSPlayerController::OnJump()
 {
 	ACharacter* Character = GetCharacter();
-	if (Character)
+	if (Character && !IsMoveInputIgnored())
 	{
 		Character->Jump();
 	}
@@ -154,17 +223,19 @@ void ABSPlayerController::OnJump()
 
 void ABSPlayerController::OnTurnAtRate(float Rate)
 {
-	AddYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
+	if(!IsMoveInputIgnored())
+		AddYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
 }
 
 void ABSPlayerController::OnLookUpRate(float Rate)
 {
-	AddPitchInput(Rate * BaseLookRate * GetWorld()->GetDeltaSeconds());
+	if(!IsMoveInputIgnored())
+		AddPitchInput(Rate * BaseLookRate * GetWorld()->GetDeltaSeconds());
 }
 
 void ABSPlayerController::OnStartFire()
 {
-	if (BSCharacter)
+	if (BSCharacter && !IsMoveInputIgnored())
 	{
 		BSCharacter->StartFire();
 	}
@@ -172,7 +243,7 @@ void ABSPlayerController::OnStartFire()
 
 void ABSPlayerController::OnStopFire()
 {
-	if (BSCharacter)
+	if (BSCharacter && !IsMoveInputIgnored())
 	{
 		BSCharacter->StopFire();
 	}
@@ -180,7 +251,7 @@ void ABSPlayerController::OnStopFire()
 
 void ABSPlayerController::OnReload()
 {
-	if (BSCharacter)
+	if (BSCharacter && !IsMoveInputIgnored())
 	{
 		BSCharacter->ReloadWeapon();
 	}
@@ -188,7 +259,7 @@ void ABSPlayerController::OnReload()
 
 void ABSPlayerController::OnStartSprint()
 {
-	if (BSCharacter)
+	if (BSCharacter && !IsMoveInputIgnored())
 	{
 		BSCharacter->SetRunning(true);
 	}
@@ -196,7 +267,7 @@ void ABSPlayerController::OnStartSprint()
 
 void ABSPlayerController::OnToggleSprint()
 {
-	if (BSCharacter)
+	if (BSCharacter && !IsMoveInputIgnored())
 	{
 		BSCharacter->ToggleRunning();
 	}
@@ -204,7 +275,7 @@ void ABSPlayerController::OnToggleSprint()
 
 void ABSPlayerController::OnStopSprint()
 {
-	if (BSCharacter)
+	if (BSCharacter && !IsMoveInputIgnored())
 	{
 		BSCharacter->SetRunning(false);
 	}
@@ -212,7 +283,7 @@ void ABSPlayerController::OnStopSprint()
 
 void ABSPlayerController::OnCrouch()
 {
-	if (BSCharacter)
+	if (BSCharacter && !IsMoveInputIgnored())
 	{
 		if (BSCharacter->bIsCrouched)
 		{

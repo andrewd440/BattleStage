@@ -14,16 +14,12 @@ class BATTLESTAGE_API UBSMainMenuWidget : public UBSUserWidget
 	GENERATED_BODY()
 	
 public:
-
-	UFUNCTION(BlueprintCallable, Category = MainMenu)
-	void OpenHostGameMenu();
-
-	UFUNCTION(BlueprintCallable, Category = MainMenu)
-	void OpenServerBrowser();
-
 	UFUNCTION(BlueprintCallable, Category = MainMenu)
 	void Quit();
 	
+	UFUNCTION(BlueprintCallable, Category = MainMenu)
+	void ShowSubMenu(TSubclassOf<UBSUserWidget> MenuType);
+
 protected:
 	/** 
 	 * Gets the panel that sub-menus will be added to for this widget. 
@@ -33,15 +29,6 @@ protected:
 	 */
 	UFUNCTION(BlueprintNativeEvent, Category = MainMenu)
 	class UContentWidget* GetSubMenuPanel();
-
-	void ShowSubMenu(TSubclassOf<UBSUserWidget> MenuType);
-
-protected:
-	UPROPERTY(EditDefaultsOnly, Category = MainMenu)
-	TSubclassOf<class UBSServerBrowserWidget> ServerBrowserClass;
-
-	UPROPERTY(EditDefaultsOnly, Category = MainMenu)
-	TSubclassOf<class UBSHostGameWidget> HostGameClass;
 
 private:
 	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))

@@ -15,6 +15,8 @@ DEFINE_LOG_CATEGORY_STATIC(BSGameMode, Warning, All);
 ABSGameMode::ABSGameMode(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
+	bPauseable = false;
+
 	MinPlayers = 1;
 	MaxPlayers = 8;
 
@@ -43,13 +45,13 @@ void ABSGameMode::InitGame(const FString& MapName, const FString& Options, FStri
 {
 	Super::InitGame(MapName, Options, ErrorMessage);
 
-	MinPlayers = UGameplayStatics::GetIntOption(Options, TravelURLKeys::MinPlayers, 2);
-	MaxPlayers = UGameplayStatics::GetIntOption(Options, TravelURLKeys::MaxPlayers, ABSGameSession::DEFAULT_MAX_PLAYERS);
+	MinPlayers = UGameplayStatics::GetIntOption(Options, TravelURLKeys::MinPlayers, MinPlayers);
+	MaxPlayers = UGameplayStatics::GetIntOption(Options, TravelURLKeys::MaxPlayers, MaxPlayers);
 
-	TimeLimit = FMath::Max(0, UGameplayStatics::GetIntOption(Options, TravelURLKeys::TimeLimit, 1));
+	TimeLimit = FMath::Max(0, UGameplayStatics::GetIntOption(Options, TravelURLKeys::TimeLimit, TimeLimit));
 	TimeLimit *= 60; // Convert minutes to seconds
 
-	ScoreGoal = FMath::Max(0, UGameplayStatics::GetIntOption(Options, TravelURLKeys::ScoreGoal, 10));
+	ScoreGoal = FMath::Max(0, UGameplayStatics::GetIntOption(Options, TravelURLKeys::ScoreGoal, ScoreGoal));
 }
 
 void ABSGameMode::InitGameState()
@@ -118,6 +120,13 @@ void ABSGameMode::ScoreDeath_Implementation(AController* Player)
 	{
 		PlayerState->ScoreDeath(nullptr, DeathScore);
 	}
+}
+
+void ABSGameMode::HostTerminateGame()
+{
+	EndMatch();
+
+	GameSession->ReturnToMainMenuHost();
 }
 
 void ABSGameMode::CheckScore(ABSPlayerState* Player)

@@ -27,6 +27,12 @@ public:
 	UFUNCTION(BlueprintNativeEvent, Category = GameMode)
 	void ScoreDeath(AController* Player);
 
+	/**
+	 * Called when the host has left the game and the game should be 
+	 * terminated. All players will be returned to the main menu.
+	 */
+	void HostTerminateGame();
+
 protected:
 
 	/**

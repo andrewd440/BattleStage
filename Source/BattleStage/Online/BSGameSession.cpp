@@ -15,7 +15,6 @@ ABSGameSession::ABSGameSession(const FObjectInitializer& ObjectInitializer)
 	OnCreateSessionCompleteDelegate = FOnCreateSessionCompleteDelegate::CreateUObject(this, &ABSGameSession::OnCreateDelegateComplete);
 	OnFindSessionsCompletedDelegate = FOnFindSessionsCompleteDelegate::CreateUObject(this, &ABSGameSession::OnFindSessionsComplete);
 	OnJoinSessionCompleteDelegate = FOnJoinSessionCompleteDelegate::CreateUObject(this, &ABSGameSession::OnJoinSessionComplete);
-	OnContinueDestroyingOnlineSessionDelegate = FOnCreateSessionCompleteDelegate::CreateUObject(this, &ABSGameSession::OnContinueDestroyingOnlineSession);
 }
 
 bool ABSGameSession::CreateSession(ULocalPlayer* LocalPlayer, const FName SessionName, const int32 MaxConnections, const bool bIsLan, const FString& GameType, const FString& MapName)
@@ -152,56 +151,4 @@ void ABSGameSession::OnJoinSessionComplete(FName SessionName, EOnJoinSessionComp
 void ABSGameSession::ReturnToMainMenuHost()
 {
 	Super::ReturnToMainMenuHost();
-
-	GracefullyDestroyOnlineSession();
-}
-
-void ABSGameSession::GracefullyDestroyOnlineSession()
-{
-	UWorld* World = GetWorld();
-	IOnlineSessionPtr SessionInt = Online::GetSessionInterface(World);
-	if (SessionInt.IsValid())
-	{
-		const EOnlineSessionState::Type SessionState = SessionInt->GetSessionState(GameSessionName);
-
-		// Handle each possible state in the session state to ensure the the session is destroyed
-		// gracefully.
-		switch (SessionState)
-		{
-		case EOnlineSessionState::Creating:
-			OnContinueDestroyingOnlineSessionHandle = SessionInt->AddOnCreateSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionDelegate);
-			break;
-		case EOnlineSessionState::Starting:
-			OnContinueDestroyingOnlineSessionHandle = SessionInt->AddOnStartSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionDelegate);
-			break;
-		case EOnlineSessionState::InProgress:
-			OnContinueDestroyingOnlineSessionHandle = SessionInt->AddOnEndSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionDelegate);
-			SessionInt->EndSession(GameSessionName);
-		case EOnlineSessionState::Ending:
-			OnContinueDestroyingOnlineSessionHandle = SessionInt->AddOnEndSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionDelegate);
-			break;
-		case EOnlineSessionState::Ended:
-		case EOnlineSessionState::Pending:
-			OnContinueDestroyingOnlineSessionHandle = SessionInt->AddOnDestroySessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionDelegate);
-			SessionInt->DestroySession(GameSessionName);
-			break;
-		}
-	}
-}
-
-void ABSGameSession::OnContinueDestroyingOnlineSession(FName, bool)
-{
-	UWorld* World = GetWorld();
-	IOnlineSessionPtr SessionInt = Online::GetSessionInterface(World);
-	if (SessionInt.IsValid())
-	{
-		// Make sure all possible delegates are cleared from GracefullyDestroyOnlineSession.
-		SessionInt->ClearOnCreateSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionHandle);
-		SessionInt->ClearOnStartSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionHandle);
-		SessionInt->ClearOnEndSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionHandle);
-		SessionInt->ClearOnDestroySessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionHandle);
-
-		// Continue destruction
-		GracefullyDestroyOnlineSession();
-	}
 }

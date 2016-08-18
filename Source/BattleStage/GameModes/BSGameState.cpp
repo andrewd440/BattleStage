@@ -26,6 +26,23 @@ void ABSGameState::AddScore(ABSPlayerState* Scorer, const int32 Score)
 
 }
 
+void ABSGameState::QuitGameAndReturnToMainMenu()
+{
+	if (AuthorityGameMode)
+	{
+		// This is the server, end the game
+		if (ABSGameMode* const GameMode = Cast<ABSGameMode>(AuthorityGameMode))
+		{
+			GameMode->HostTerminateGame();
+		}
+	}
+	else if(APlayerController* const PlayController = GetGameInstance()->GetFirstLocalPlayerController())
+	{
+		// Client, leave game
+		PlayController->ClientReturnToMainMenu(FString{});
+	}
+}
+
 void ABSGameState::SetTimeLimit(const int32 Time)
 {
 	TimeLimit = Time;

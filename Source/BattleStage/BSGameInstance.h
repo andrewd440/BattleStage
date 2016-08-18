@@ -29,6 +29,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = GameInstance)
 	bool FindSessions(ULocalPlayer* LocalPlayer, const FString& Filters);
 
+	void GracefullyDestroyOnlineSession();
+
 	/** UGameInstance Interface Begin */
 	virtual bool JoinSession(ULocalPlayer* LocalPlayer, const FOnlineSessionSearchResult& SearchResult) override;
 	virtual bool JoinSession(ULocalPlayer* LocalPlayer, int32 SessionIndexInSearchResults) override;
@@ -40,6 +42,8 @@ protected:
 	void OnFindSessionsComplete(bool bWasSuccessful);
 
 	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
+
+	void OnContinueDestroyingOnlineSession(FName SessionName, bool bWasSuccessful);
 
 protected:
 	/** Travel url held during async network operations */
@@ -58,6 +62,9 @@ private:
 	FDelegateHandle OnHostSessionCreatedHandle;
 	FDelegateHandle OnFindSessionsCompleteHandle;
 	FDelegateHandle OnJoinSessionCompleteHandle;
+	FDelegateHandle OnContinueDestroyingOnlineSessionHandle;
+
+	FOnCreateSessionCompleteDelegate OnContinueDestroyingOnlineSessionDelegate;
 
 public:
 	TSubclassOf<class UBSMatchConfig> GetMatchConfigClass() const { return MatchConfigClass; }

@@ -99,11 +99,7 @@ private:
 	*/
 	void OnFindSessionsComplete(bool bWasSuccessful);
 
-	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
-
-private:
-	void GracefullyDestroyOnlineSession();
-	void OnContinueDestroyingOnlineSession(FName SessionName, bool bWasSuccessful);
+	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);	
 
 protected:
 	// The current sessions search settings
@@ -113,7 +109,6 @@ protected:
 	FOnCreateSessionCompleteDelegate OnCreateSessionCompleteDelegate;
 	FOnFindSessionsCompleteDelegate OnFindSessionsCompletedDelegate;
 	FOnJoinSessionCompleteDelegate OnJoinSessionCompleteDelegate;
-	FOnCreateSessionCompleteDelegate OnContinueDestroyingOnlineSessionDelegate;
 
 	// Events broadcasted when network operations are completed
 	FOnSessionCreatedEvent OnSessionCreatedEvent;
@@ -125,5 +120,4 @@ private:
 	FDelegateHandle OnCreateSessionCompleteHandle;	
 	FDelegateHandle OnFindSessionsCompleteHandle;
 	FDelegateHandle OnJoinSessionCompleteHandle;
-	FDelegateHandle OnContinueDestroyingOnlineSessionHandle;
 };

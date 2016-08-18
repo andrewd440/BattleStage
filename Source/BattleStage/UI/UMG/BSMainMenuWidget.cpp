@@ -7,17 +7,6 @@
 #include "BSGameInstance.h"
 #include "ContentWidget.h"
 
-
-void UBSMainMenuWidget::OpenHostGameMenu()
-{
-	ShowSubMenu(HostGameClass);
-}
-
-void UBSMainMenuWidget::OpenServerBrowser()
-{
-	ShowSubMenu(ServerBrowserClass);
-}
-
 void UBSMainMenuWidget::Quit()
 {
 	GetOwningPlayer()->ConsoleCommand(TEXT("Quit"));

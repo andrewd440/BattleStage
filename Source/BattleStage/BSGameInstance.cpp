@@ -5,12 +5,15 @@
 #include "Online/BSGameSession.h"
 #include "BSTypes.h"
 #include "BSMatchConfig.h"
+#include "OnlineSubsystemUtils.h"
 
 UBSGameInstance::UBSGameInstance(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 	, bIsOnline(true)
 {
 	MatchConfigClass = UBSMatchConfig::StaticClass();
+
+	OnContinueDestroyingOnlineSessionDelegate = FOnCreateSessionCompleteDelegate::CreateUObject(this, &UBSGameInstance::OnContinueDestroyingOnlineSession);
 }
 
 void UBSGameInstance::SetIsOnline(const bool IsOnline)
@@ -185,4 +188,52 @@ ABSGameSession* UBSGameInstance::GetGameSession() const
 	}
 
 	return GameSession;
+}
+
+void UBSGameInstance::OnContinueDestroyingOnlineSession(FName, bool)
+{
+	IOnlineSessionPtr SessionInt = Online::GetSessionInterface(GetWorld());
+	if (SessionInt.IsValid())
+	{
+		// Make sure all possible delegates are cleared from GracefullyDestroyOnlineSession.
+		SessionInt->ClearOnCreateSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionHandle);
+		SessionInt->ClearOnStartSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionHandle);
+		SessionInt->ClearOnEndSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionHandle);
+		SessionInt->ClearOnDestroySessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionHandle);
+
+		// Continue destruction
+		GracefullyDestroyOnlineSession();
+	}
+}
+
+void UBSGameInstance::GracefullyDestroyOnlineSession()
+{
+	IOnlineSessionPtr SessionInt = Online::GetSessionInterface(GetWorld());
+	if (SessionInt.IsValid())
+	{
+		const EOnlineSessionState::Type SessionState = SessionInt->GetSessionState(GameSessionName);
+
+		// Handle each possible state in the session state to ensure the the session is destroyed
+		// gracefully.
+		switch (SessionState)
+		{
+		case EOnlineSessionState::Creating:
+			OnContinueDestroyingOnlineSessionHandle = SessionInt->AddOnCreateSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionDelegate);
+			break;
+		case EOnlineSessionState::Starting:
+			OnContinueDestroyingOnlineSessionHandle = SessionInt->AddOnStartSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionDelegate);
+			break;
+		case EOnlineSessionState::InProgress:
+			OnContinueDestroyingOnlineSessionHandle = SessionInt->AddOnEndSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionDelegate);
+			SessionInt->EndSession(GameSessionName);
+		case EOnlineSessionState::Ending:
+			OnContinueDestroyingOnlineSessionHandle = SessionInt->AddOnEndSessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionDelegate);
+			break;
+		case EOnlineSessionState::Ended:
+		case EOnlineSessionState::Pending:
+			OnContinueDestroyingOnlineSessionHandle = SessionInt->AddOnDestroySessionCompleteDelegate_Handle(OnContinueDestroyingOnlineSessionDelegate);
+			SessionInt->DestroySession(GameSessionName);
+			break;
+		}
+	}
 }

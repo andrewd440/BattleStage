@@ -44,6 +44,26 @@ public:
 	*/
 	virtual void NotifyReceivedDamage(const FVector& SourcePosition);
 
+	UFUNCTION(BlueprintCallable, Category = Menu)
+	virtual void ToggleInGameMenu();
+	
+	/**
+	* Shows or hides the in-game menu.
+	* 
+	* @param bShowMenu	True if the menu should be shown. False if it should be hidden.
+	*/
+	UFUNCTION(BlueprintCallable, Category = Menu)
+	virtual void ShowInGameMenu(const bool bShowMenu);
+
+	/**
+	* Used to handle player requests to leave the current game and return to the main
+	* menu. Delgates work to the GameState to handle client/host quit game behavior.
+	*/
+	UFUNCTION(BlueprintCallable, Category = PlayerController)
+	void HandleReturnToMainMenu();
+
+	virtual void ClientReturnToMainMenu_Implementation(const FString& ReturnReason) override;
+
 protected:
 	UFUNCTION(Client, Unreliable)
 	void ClientNotifyWeaponHit();
@@ -94,9 +114,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Controller)
 	TSubclassOf<UCameraShake> HitCameraShake;
 
+	UPROPERTY(EditDefaultsOnly, Category = Menu)
+	TSubclassOf<class UBSUserWidget> InGameMenuClass;
+
 private:
 	ABSCharacter* BSCharacter; //< If valid, the owning BSCharacter
 	
+	UBSUserWidget* InGameMenuWidget = nullptr;
+
 	//-----------------------------------------------------------------
 	// Begin AController Interface
 	//-----------------------------------------------------------------

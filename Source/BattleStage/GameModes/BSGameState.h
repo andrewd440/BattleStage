@@ -47,6 +47,13 @@ public:
 	bool IsTeamGame() const { return bIsTeamGame; }
 
 	void SetIsTeamGame(uint32 IsTeamGame) { bIsTeamGame = IsTeamGame; }
+	
+	/**
+	* Called by local players to quit the current game and return to the main menu. 
+	* If this is called by the host of the game, the game will be ended and connected clients will be
+	* disconnected from the game and returned to the main menu. 
+	*/
+	void QuitGameAndReturnToMainMenu();
 
 public:
 	// Broadcasted when the remaining time for the match is updated.
