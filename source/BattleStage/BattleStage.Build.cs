@@ -6,7 +6,21 @@ public class BattleStage : ModuleRules
 {
 	public BattleStage(TargetInfo Target)
 	{
-		PublicDependencyModuleNames.AddRange(
+
+        PrivateIncludePaths.AddRange(
+            new string[] {
+                "BattleStage/Private",
+                "BattleStage/Private/UI",
+                "BattleStage/Private/UI/UMG",
+                "BattleStage/Private/UI/UMG/HUD",
+                "BattleStage/Private/Effects",
+                "BattleStage/Private/GameModes",
+                "BattleStage/Private/Online",
+                "BattleStage/Private/Player",
+                "BattleStage/Private/Weapons",
+            });
+
+        PublicDependencyModuleNames.AddRange(
             new string[] {
                 "Core",
                 "CoreUObject",
