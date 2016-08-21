@@ -1,11 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "BattleStage.h"
+#include "CanvasItem.h"
 #include "BSHUD.h"
-#include "UserWidget.h"
 #include "Player/BSCharacter.h"
 #include "Weapons/BSWeapon.h"
-#include "CanvasItem.h"
+
+#include "UMG/BSScoreboardWidget.h"
+#include "UMG/HUD/BSHUDLayout.h"
 
 ABSHUD::ABSHUD(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -34,14 +36,42 @@ void ABSHUD::NotifyReceivedDamage(const FVector& InDamageOrigin)
 	OnNotifyReceivedDamage.Broadcast(InDamageOrigin);
 }
 
+bool ABSHUD::IsGameScoreboardUp() const
+{
+	return GameScoreboard && GameScoreboard->IsInViewport();
+}
+
+void ABSHUD::ShowGameScoreboard(const bool bShowScoreboard)
+{
+	if (bShowScoreboard && !IsGameScoreboardUp())
+	{
+		if (GameScoreboard)
+		{
+			GameScoreboard->AddToViewport();
+		}
+	}
+	else if (!bShowScoreboard && IsGameScoreboardUp())
+	{
+		GameScoreboard->RemoveFromParent();
+	}
+}
+
 void ABSHUD::BeginPlay()
 {
 	Super::BeginPlay();
 
 	if (HUDLayoutClass)
 	{
-		HUDLayoutWidget = CreateWidget<UUserWidget>(PlayerOwner, HUDLayoutClass);
-		HUDLayoutWidget->AddToViewport();
+		HUDLayout = CreateWidget<UBSHUDLayout>(PlayerOwner, HUDLayoutClass);
+		HUDLayout->AddToViewport();
+	}
+
+	if (const AGameState* GameState = GetWorld()->GetGameState())
+	{
+		if (const ABSGameMode* GameMode = Cast<const ABSGameMode>(GameState->GameModeClass->GetDefaultObject()))
+		{
+			GameScoreboard = CreateWidget<UBSScoreboardWidget>(PlayerOwner, GameMode->GetScoreboardWidget());
+		}
 	}
 }
 

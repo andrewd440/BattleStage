@@ -57,7 +57,7 @@ void ABSPlayerController::NotifyReceivedDamage(const FVector& SourcePosition)
 
 void ABSPlayerController::ToggleInGameMenu()
 {
-	const bool bShowMenu = (InGameMenuWidget && InGameMenuWidget->IsVisible()) ? false : true;
+	const bool bShowMenu = (InGameMenuWidget && InGameMenuWidget->IsInViewport()) ? false : true;
 	ShowInGameMenu(bShowMenu);
 }
 
@@ -88,11 +88,21 @@ void ABSPlayerController::ShowInGameMenu(const bool bShowMenu)
 	else if (InGameMenuWidget && InGameMenuWidget->IsInViewport())
 	{
 		InGameMenuWidget->RemoveFromParent();		
+		InGameMenuWidget = nullptr;
+
 		SetCinematicMode(false, true, true);
 
 		// Set input back to game only
 		SetInputMode(FInputModeGameOnly{});
 		bShowMouseCursor = false;
+	}
+}
+
+void ABSPlayerController::ToggleGameScoreboard()
+{
+	if (ABSHUD* HUD = Cast<ABSHUD>(GetHUD()))
+	{
+		HUD->ShowGameScoreboard(!HUD->IsGameScoreboardUp());
 	}
 }
 
@@ -151,6 +161,7 @@ void ABSPlayerController::SetupInputComponent()
 	check(InputComponent);
 
 	InputComponent->BindAction("GameMenu", IE_Pressed, this, &ABSPlayerController::ToggleInGameMenu);
+	InputComponent->BindAction("Scoreboard", IE_Pressed, this, &ABSPlayerController::ToggleGameScoreboard);
 
 	InputComponent->BindAxis("MoveForward", this, &ABSPlayerController::OnMoveForward);
 	InputComponent->BindAxis("MoveRight", this, &ABSPlayerController::OnMoveRight);

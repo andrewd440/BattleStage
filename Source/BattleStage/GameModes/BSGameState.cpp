@@ -2,7 +2,8 @@
 
 #include "BattleStage.h"
 #include "BSGameState.h"
-#include "UnrealNetwork.h"
+
+#include "Player/BSPlayerState.h"
 
 DEFINE_LOG_CATEGORY_STATIC(ABSGameState, Warning, All);
 
@@ -11,19 +12,25 @@ void ABSGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME_CONDITION(ABSGameState, TimeLimit, COND_InitialOnly);
-	DOREPLIFETIME_CONDITION(ABSGameState, GoalScore, COND_InitialOnly);
+	DOREPLIFETIME_CONDITION(ABSGameState, ScoreGoal, COND_InitialOnly);
+
+	DOREPLIFETIME(ABSGameState, LastScoreEvent);
 }
 
-void ABSGameState::DefaultTimer()
+void ABSGameState::AddScore(ABSPlayerState* Scorer, ABSPlayerState* Victim, const int32 Score, const EScoreType ScoreType)
 {
-	Super::DefaultTimer();
+	LastScoreEvent.Type = ScoreType;
+	LastScoreEvent.Scorer = Scorer;
+	LastScoreEvent.Victim = Victim;
 
-	OnRemainingTimeChanged.Broadcast();
+	LastScoreEvent.ForceReplication();
+
+	OnRecievedScoreEvent();
 }
 
-void ABSGameState::AddScore(ABSPlayerState* Scorer, const int32 Score)
+void ABSGameState::OnRecievedScoreEvent()
 {
-
+	OnScoreEvent().Broadcast(LastScoreEvent);
 }
 
 void ABSGameState::QuitGameAndReturnToMainMenu()
@@ -41,9 +48,4 @@ void ABSGameState::QuitGameAndReturnToMainMenu()
 		// Client, leave game
 		PlayController->ClientReturnToMainMenu(FString{});
 	}
-}
-
-void ABSGameState::SetTimeLimit(const int32 Time)
-{
-	TimeLimit = Time;
 }

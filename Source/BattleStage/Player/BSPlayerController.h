@@ -44,16 +44,31 @@ public:
 	*/
 	virtual void NotifyReceivedDamage(const FVector& SourcePosition);
 
+	/**
+	* Toggles the in-game menu.
+	*/
 	UFUNCTION(BlueprintCallable, Category = Menu)
-	virtual void ToggleInGameMenu();
+	void ToggleInGameMenu();
 	
 	/**
 	* Shows or hides the in-game menu.
 	* 
 	* @param bShowMenu	True if the menu should be shown. False if it should be hidden.
 	*/
+	void ShowInGameMenu(const bool bShowMenu);
+
+	/**
+	* Toggles the in-game menu.
+	*/
 	UFUNCTION(BlueprintCallable, Category = Menu)
-	virtual void ShowInGameMenu(const bool bShowMenu);
+	void ToggleGameScoreboard();
+
+	/**
+	* Shows or hides the game scoreboard.
+	*
+	* @param bShowScoreboard	True if the menu should be shown. False if it should be hidden.
+	*/
+	void ShowGameScoreboard(const bool bShowScoreboard);
 
 	/**
 	* Used to handle player requests to leave the current game and return to the main
@@ -118,7 +133,7 @@ protected:
 	TSubclassOf<class UBSUserWidget> InGameMenuClass;
 
 private:
-	ABSCharacter* BSCharacter; //< If valid, the owning BSCharacter
+	ABSCharacter* BSCharacter = nullptr; //< If valid, the owning BSCharacter
 	
 	UBSUserWidget* InGameMenuWidget = nullptr;
 

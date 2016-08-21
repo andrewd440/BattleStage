@@ -4,6 +4,7 @@
 #define __BATTLESTAGE_H__
 
 #include "Engine.h"
+#include "UMG.h"
 #include "Net/UnrealNetwork.h"
 #include "GameModes/BSGameMode.h"
 

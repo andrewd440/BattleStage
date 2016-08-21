@@ -62,9 +62,9 @@ void ABSGameMode::InitGameState()
 
 	if (BSGameState)
 	{
-		BSGameState->SetTimeLimit(TimeLimit);
-		BSGameState->SetGoalScore(ScoreGoal);
-		BSGameState->SetIsTeamGame(bIsTeamGame);
+		BSGameState->TimeLimit = TimeLimit;
+		BSGameState->ScoreGoal = ScoreGoal;
+		BSGameState->bIsTeamGame = bIsTeamGame;
 	}
 	else
 	{
@@ -90,35 +90,41 @@ TSubclassOf<class AGameSession> ABSGameMode::GetGameSessionClass() const
 	return ABSGameSession::StaticClass();
 }
 
-void ABSGameMode::ScoreKill_Implementation(AController* Player, AController* Killed)
+void ABSGameMode::ScoreKill_Implementation(AController* Scorer, AController* Killed)
 {
-	ABSPlayerState* PlayerState = Cast<ABSPlayerState>(Player->PlayerState);
+	ABSPlayerState* ScorerState = Cast<ABSPlayerState>(Scorer->PlayerState);
 
-	if (PlayerState)
+	if (ScorerState)
 	{
-		if (Player == Killed)
+		if (Scorer == Killed)
 		{
 			// Suicide
-			PlayerState->ScoreDeath(PlayerState, DeathScore);
+			ScorerState->ScoreDeath(ScorerState, DeathScore);
+			
+			BSGameState->AddScore(ScorerState, nullptr, DeathScore, EScoreType::Suicide);
 		}
 		else if (Killed)
-		{
+		{			
 			if (ABSPlayerState* KilledState = Cast<ABSPlayerState>(Killed->PlayerState))
 			{
-				PlayerState->ScoreKill(KilledState, KillScore);
-				KilledState->ScoreDeath(PlayerState, DeathScore);
+				ScorerState->ScoreKill(KilledState, KillScore);
+				KilledState->ScoreDeath(ScorerState, DeathScore);
+
+				BSGameState->AddScore(ScorerState, KilledState, KillScore, EScoreType::Kill);
 			}
 		}
 	}
 
-	CheckScore(PlayerState);
+	CheckScore(ScorerState);
 }
 
-void ABSGameMode::ScoreDeath_Implementation(AController* Player)
+void ABSGameMode::ScoreDeath_Implementation(AController* Scorer)
 {
-	if(ABSPlayerState* PlayerState = Cast<ABSPlayerState>(Player->PlayerState))
+	if(ABSPlayerState* ScorerState = Cast<ABSPlayerState>(Scorer->PlayerState))
 	{
-		PlayerState->ScoreDeath(nullptr, DeathScore);
+		ScorerState->ScoreDeath(nullptr, DeathScore);
+
+		BSGameState->AddScore(ScorerState, nullptr, DeathScore, EScoreType::Death);
 	}
 }
 
@@ -127,6 +133,11 @@ void ABSGameMode::HostTerminateGame()
 	EndMatch();
 
 	GameSession->ReturnToMainMenuHost();
+}
+
+TSubclassOf<UBSScoreboardWidget> ABSGameMode::GetScoreboardWidget() const
+{
+	return ScoreboardWidget;
 }
 
 void ABSGameMode::CheckScore(ABSPlayerState* Player)

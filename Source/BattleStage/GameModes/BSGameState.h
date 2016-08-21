@@ -7,7 +7,38 @@
 
 class ABSPlayerState;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnRemainingTimeChangedEvent);
+UENUM()
+enum class EScoreType : uint8
+{
+	Kill,
+	Death,
+	Suicide,
+};
+
+USTRUCT()
+struct FScoreEvent
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY()
+	EScoreType Type;
+
+	UPROPERTY()
+	TWeakObjectPtr<ABSPlayerState> Scorer;
+
+	UPROPERTY()
+	TWeakObjectPtr<ABSPlayerState> Victim;
+
+	/** Ensures the score event is replicated. */
+	void ForceReplication()
+	{
+		++ReplicationByte;
+	}
+
+private:
+	UPROPERTY()
+	uint8 ReplicationByte;
+};
 
 /**
  * 
@@ -18,35 +49,23 @@ class BATTLESTAGE_API ABSGameState : public AGameState
 	GENERATED_BODY()
 
 public:
+	/** Broadcasted when a score event has been received */
+	DECLARE_EVENT_OneParam(ABSGameState, FOnScoreEvent, const FScoreEvent&);
+	FOnScoreEvent& OnScoreEvent() { return OnScoreEventReceived; }
+
+public:
 	/** Get the time remaining it this match */
 	UFUNCTION(BlueprintCallable, Category = GameState)
 	int32 GetRemainingTime() const { return TimeLimit - ElapsedTime; }
 	
-	/** Set the time limit for the current match */
-	void SetTimeLimit(const int32 Time);
-	
 	/** Get the time limit for the current match */
 	int32 GetTimeLimit() const { return TimeLimit; }
 
-	void SetGoalScore(int32 Score) { GoalScore = Score; }
-
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	virtual void DefaultTimer() override;
-
-	/**
-	* Add a score that was created by a player.
-	*
-	* @param Scorer	The player state the scored.
-	* @param Score	The score to add.
-	*/
-	UFUNCTION(BlueprintCallable, Category = GameState)
-	void AddScore(ABSPlayerState* Scorer, const int32 Score);
+	/** Get the score goal for the current game */
+	int32 GetScoreGoal() const { return ScoreGoal; }
 
 	UFUNCTION(BlueprintCallable, Category = GameState)
 	bool IsTeamGame() const { return bIsTeamGame; }
-
-	void SetIsTeamGame(uint32 IsTeamGame) { bIsTeamGame = IsTeamGame; }
 	
 	/**
 	* Called by local players to quit the current game and return to the main menu. 
@@ -55,18 +74,47 @@ public:
 	*/
 	void QuitGameAndReturnToMainMenu();
 
-public:
-	// Broadcasted when the remaining time for the match is updated.
-	UPROPERTY(BlueprintAssignable, Category = GameState)
-	FOnRemainingTimeChangedEvent OnRemainingTimeChanged;
+	/** AActor Interface Begin */
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	/** AActor Interface End */
 
-private:
+protected:
+	/**
+	* Add a score that was created by a player.
+	*
+	* @param Scorer		The player state the scored.
+	* @param Victim		The player that was a victim of the scorer. (i.e. was killed)
+	* @param Score		The score to add.
+	* @param ScoreType	The type of score event.
+	*/
+	UFUNCTION(BlueprintCallable, Category = GameState)
+	void AddScore(ABSPlayerState* Scorer, ABSPlayerState* Victim, const int32 Score, const EScoreType ScoreType);
+
+	/**
+	 * Called when a score event has been received.
+	 * 
+	 * Derived implementations should always call base implementation to broadcast
+	 * score event.
+	 */
+	UFUNCTION()
+	virtual void OnRecievedScoreEvent();
+
+protected:
+	friend class ABSGameMode;
+
 	UPROPERTY(Transient, Replicated, BlueprintReadOnly, Category = GameState, meta = (AllowPrivateAccess = "true"))
 	int32 TimeLimit;
 
 	UPROPERTY(Transient, Replicated, BlueprintReadOnly, Category = GameState, meta = (AllowPrivateAccess = "true"))
-	int32 GoalScore;
+	int32 ScoreGoal;
 
 	UPROPERTY(Transient, Replicated, BlueprintReadOnly, Category = GameState, meta = (AllowPrivateAccess = "true"))
 	uint32 bIsTeamGame : 1;
+
+	/** The last score event that was received */
+	UPROPERTY(ReplicatedUsing = OnRecievedScoreEvent)
+	FScoreEvent LastScoreEvent;
+
+	/** Event broadcasted when a score event is received */
+	FOnScoreEvent OnScoreEventReceived;
 };

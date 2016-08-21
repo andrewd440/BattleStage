@@ -12,7 +12,8 @@ public class BattleStage : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "OnlineSubsystem",
-                "OnlineSubsystemUtils"
+                "OnlineSubsystemUtils",
+                "UMG",
             });
     
         PrivateDependencyModuleNames.AddRange(
@@ -20,8 +21,7 @@ public class BattleStage : ModuleRules
                 "HeadMountedDisplay",
                 "InputCore",
                 "Slate",
-                "SlateCore",
-                "UMG"
+                "SlateCore",                
             });
 
         DynamicallyLoadedModuleNames.AddRange(

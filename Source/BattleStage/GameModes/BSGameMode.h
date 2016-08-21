@@ -18,20 +18,22 @@ public:
 	* @param Killed	The player that was killed.
 	*/
 	UFUNCTION(BlueprintNativeEvent, Category = GameMode)
-	void ScoreKill(AController* Player, AController* Killed);
+	void ScoreKill(AController* Scorer, AController* Killed);
 	
 	/**
 	* Score a player death that wasn't directly caused by
 	* another player.
 	*/
 	UFUNCTION(BlueprintNativeEvent, Category = GameMode)
-	void ScoreDeath(AController* Player);
+	void ScoreDeath(AController* Scorer);
 
 	/**
 	 * Called when the host has left the game and the game should be 
 	 * terminated. All players will be returned to the main menu.
 	 */
 	void HostTerminateGame();
+
+	TSubclassOf<class UBSScoreboardWidget> GetScoreboardWidget() const;
 
 protected:
 
@@ -81,6 +83,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = GameMode)
 	uint32 bIsTeamGame : 1;
+
+	UPROPERTY(EditDefaultsOnly, Category = GameMode)
+	TSubclassOf<class UBSScoreboardWidget> ScoreboardWidget;
 
 	// Will be assigned the match winner at the end of a non-team based game.
 	ABSPlayerState* WinningPlayer;

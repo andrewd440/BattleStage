@@ -31,17 +31,6 @@ class BATTLESTAGE_API ABSHUD : public AHUD
 	GENERATED_UCLASS_BODY()
 
 public:
-	/** Notifies the HUD when a controlled weapon has hit a character. */
-	void NotifyWeaponHit();
-
-	/** 
-	 * Notifies the HUD that the controlled character has received damage in game. 
-	 * Will activate HUD based effects that respond to damage events.
-	 * 
-	 * @param SourcePosition	The world position of the source of the damage.
-	 */
-	void NotifyReceivedDamage(const FVector& SourcePosition);
-
 	//-----------------------------------------------------------------
 	// HUD Events
 	//-----------------------------------------------------------------
@@ -53,6 +42,24 @@ public:
 	/** Broadcasted when a received damage occurs. */
 	UPROPERTY(BlueprintAssignable, Category = HUD)
 	FOnNotifyReceivedDamageEvent OnNotifyReceivedDamage;
+
+public:
+	/** Notifies the HUD when a controlled weapon has hit a character. */
+	void NotifyWeaponHit();
+
+	/** 
+	 * Notifies the HUD that the controlled character has received damage in game. 
+	 * Will activate HUD based effects that respond to damage events.
+	 * 
+	 * @param SourcePosition	The world position of the source of the damage.
+	 */
+	void NotifyReceivedDamage(const FVector& SourcePosition);
+
+	/** Check if the game scoreboard is up */
+	bool IsGameScoreboardUp() const;
+
+	/** Show/Hide the game scoreboard */
+	void ShowGameScoreboard(const bool bShowScoreboard);
 
 	/** AHUD Interface Begin */
 	virtual void DrawHUD() override;
@@ -89,7 +96,7 @@ private:
 protected:
 	/** Widget type for the HUD layout, container for in-game HUD */
 	UPROPERTY(EditDefaultsOnly, Category = HUD)
-	TSubclassOf<UUserWidget> HUDLayoutClass;
+	TSubclassOf<class UBSHUDLayout> HUDLayoutClass;
 
 	/** Weapon crosshair components */
 	UPROPERTY(EditAnywhere, Category = HUD)
@@ -120,7 +127,11 @@ protected:
 	UTexture2D* LowHealthOverlay;
 
 private:
-	UUserWidget* HUDLayoutWidget = nullptr;
+	UPROPERTY()
+	UBSHUDLayout* HUDLayout = nullptr;
+
+	UPROPERTY()
+	UBSScoreboardWidget* GameScoreboard = nullptr;
 
 	/** Game time of last weapon hit */
 	float LastWeaponHitTime = 0.f;

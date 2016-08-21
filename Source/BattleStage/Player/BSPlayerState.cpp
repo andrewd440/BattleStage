@@ -8,11 +8,13 @@
 void ABSPlayerState::ScoreKill(ABSPlayerState* Killed, int32 Points)
 {
 	Score += Points;
+	++Kills;
 }
 
 void ABSPlayerState::ScoreDeath(ABSPlayerState* Killer, int32 Points)
 {
 	Score += Points;
+	++Deaths;
 }
 
 void ABSPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
