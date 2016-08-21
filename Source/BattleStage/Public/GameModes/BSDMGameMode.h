@@ -8,7 +8,7 @@
 /**
  * 
  */
-UCLASS()
+UCLASS(Abstract)
 class BATTLESTAGE_API ABSDMGameMode : public ABSGameMode
 {
 	GENERATED_UCLASS_BODY()

@@ -131,6 +131,14 @@ void ABSPlayerController::ClientReturnToMainMenu_Implementation(const FString& R
 	}
 }
 
+void ABSPlayerController::SetPlayer(UPlayer* InPlayer)
+{
+	Super::SetPlayer(InPlayer);
+
+	const FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+}
+
 void ABSPlayerController::ClientNotifyReceivedDamage_Implementation(const FVector& SourcePosition)
 {
 	if (ABSHUD* HUD = Cast<ABSHUD>(GetHUD()))

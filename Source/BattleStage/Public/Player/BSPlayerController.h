@@ -116,6 +116,14 @@ protected:
 	void OnStopSprint();
 	void OnCrouch();
 
+	/** APlayerController Interface Begin */
+public:
+	virtual void SetPawn(APawn* InPawn) override;
+	virtual void SetPlayer(UPlayer* InPlayer) override;
+protected:
+	virtual void SetupInputComponent() override;
+	/** APlayerController Interface End */
+
 protected:
 	/* The base turn rate of the player **/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Controller)
@@ -136,17 +144,6 @@ private:
 	ABSCharacter* BSCharacter = nullptr; //< If valid, the owning BSCharacter
 	
 	UBSUserWidget* InGameMenuWidget = nullptr;
-
-	//-----------------------------------------------------------------
-	// Begin AController Interface
-	//-----------------------------------------------------------------
-public:
-	virtual void SetPawn(APawn* InPawn) override;
-protected:
-	virtual void SetupInputComponent() override;
-	//-----------------------------------------------------------------
-	// End AController Interface
-	//-----------------------------------------------------------------
 	
 public:
 	UFUNCTION(BlueprintCallable, Category = PlayerController)
