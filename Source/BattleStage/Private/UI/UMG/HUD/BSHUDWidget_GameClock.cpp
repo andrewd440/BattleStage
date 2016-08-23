@@ -68,7 +68,7 @@ void UBSHUDWidget_GameClock::UpdateTeamScore(const int32 ScoreGoal)
 	if (TeamScore != NewTeamScore)
 	{
 		TeamScoreText->SetText(FText::AsNumber(NewTeamScore));
-		TeamScoreMeter->Percent = 1.f - NewTeamScore / (float)ScoreGoal;
+		TeamScoreMeter->SetPercent(NewTeamScore / (float)ScoreGoal);
 		TeamScore = NewTeamScore;
 	}
 }
@@ -95,7 +95,7 @@ void UBSHUDWidget_GameClock::UpdateEnemyScore(const int32 ScoreGoal)
 	if (EnemyScore != NewEnemyScore)
 	{
 		EnemyScoreText->SetText(FText::AsNumber(NewEnemyScore));
-		EnemyScoreMeter->Percent = 1.f - NewEnemyScore / (float)ScoreGoal;
+		EnemyScoreMeter->SetPercent(NewEnemyScore / (float)ScoreGoal);
 		EnemyScore = NewEnemyScore;
 	}
 }

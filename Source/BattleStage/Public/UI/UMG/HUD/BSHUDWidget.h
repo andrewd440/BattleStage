@@ -16,9 +16,9 @@ class BATTLESTAGE_API UBSHUDWidget : public UBSUserWidget
 public:
 	UBSHUDWidget(const FObjectInitializer& ObjectInitializer);
 
-	UFUNCTION(BlueprintImplementableEvent, Category = HUDWidget)
-	void OnGameStarted();
+	//UFUNCTION(BlueprintImplementableEvent, Category = HUDWidget)
+	//void OnGameStarted();
 
-	UFUNCTION(BlueprintImplementableEvent, Category = HUDWidget)
-	void OnGameEnded();
+	//UFUNCTION(BlueprintImplementableEvent, Category = HUDWidget)
+	//void OnGameEnded();
 };

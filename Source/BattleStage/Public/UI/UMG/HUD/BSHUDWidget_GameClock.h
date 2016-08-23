@@ -9,7 +9,9 @@ class UTextBlock;
 class UProgressBar;
 
 /**
+ * Displays the game timer and team scores.
  * 
+ * #bstodo Use BSGameState score events to update scores.
  */
 UCLASS(Abstract)
 class BATTLESTAGE_API UBSHUDWidget_GameClock : public UBSHUDWidget

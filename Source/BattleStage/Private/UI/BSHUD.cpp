@@ -8,6 +8,10 @@
 
 #include "BSScoreboardWidget.h"
 #include "BSHUDLayout.h"
+#include "BSGameState.h"
+#include "BSPlayerState.h"
+
+#define LOCTEXT_NAMESPACE "BattleStage.HUD"
 
 ABSHUD::ABSHUD(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -66,18 +70,52 @@ void ABSHUD::BeginPlay()
 		HUDLayout->AddToViewport();
 	}
 
-	if (const AGameState* GameState = GetWorld()->GetGameState())
+	if (ABSGameState* const GameState = GetWorld()->GetGameState<ABSGameState>())
 	{
 		if (const ABSGameMode* GameMode = Cast<const ABSGameMode>(GameState->GameModeClass->GetDefaultObject()))
 		{
 			GameScoreboard = CreateWidget<UBSScoreboardWidget>(PlayerOwner, GameMode->GetScoreboardWidget());
 		}
+
+		GameState->OnScoreEvent().AddUObject(this, &ABSHUD::OnScoreEventReceived);
 	}
+}
+
+void ABSHUD::OnScoreEventReceived(const FScoreEvent& ScoreEvent)
+{
+	constexpr int32 MaxEventCount = 3;
+	constexpr float EventFeedItemLifetime = 4.f;
+
+	if (EventFeed.Num() >= MaxEventCount)
+	{
+		EventFeed.RemoveAt(1, 1, false);
+	}
+
+	FEventFeedItem FeedItem;
+	FeedItem.ExpireTime = GetWorld()->GetTimeSeconds() + EventFeedItemLifetime;
+	FeedItem.ScorerName = FText::FromString(ScoreEvent.Scorer->PlayerName);
+	FeedItem.bPlayerScore = PlayerOwner ? ScoreEvent.Scorer == PlayerOwner->PlayerState : false;
+
+	if (ScoreEvent.Victim.IsValid())
+	{
+		FeedItem.VictemName = FText::FromString(ScoreEvent.Victim->PlayerName);
+		FeedItem.bPlayerVictim = PlayerOwner ? ScoreEvent.Victim == PlayerOwner->PlayerState : false;
+	}
+	else
+	{
+		FeedItem.bPlayerVictim = false;
+	}
+
+	FeedItem.Type = ScoreEvent.Type;
+
+	EventFeed.Add(std::move(FeedItem));
 }
 
 void ABSHUD::DrawHUD()
 {
 	Super::DrawHUD();
+
+	UIScale = Canvas->ClipY / 1080.f;
 
 	if (ABSCharacter* Character = Cast<ABSCharacter>(GetOwningPawn()))
 	{
@@ -86,6 +124,7 @@ void ABSHUD::DrawHUD()
 	}
 
 	DrawDamageIndicator();
+	DrawEventFeed();
 }
 
 void ABSHUD::DrawCrosshair(ABSCharacter& Character)
@@ -104,28 +143,33 @@ void ABSHUD::DrawCrosshair(ABSCharacter& Character)
 
 			// Center
 			Canvas->DrawIcon(Crosshair[(uint8)ECrosshairPosition::Center], 
-				CenterX - Crosshair[(uint8)ECrosshairPosition::Center].UL / 2.f,
-				CenterY - Crosshair[(uint8)ECrosshairPosition::Center].VL / 2.f);
+				CenterX - Crosshair[(uint8)ECrosshairPosition::Center].UL * UIScale / 2.f,
+				CenterY - Crosshair[(uint8)ECrosshairPosition::Center].VL * UIScale / 2.f,
+				UIScale);
 
 			// Top
 			Canvas->DrawIcon(Crosshair[(uint8)ECrosshairPosition::Top],
-				CenterX - Crosshair[(uint8)ECrosshairPosition::Top].UL / 2.f,
-				CenterY - AimSpread - Crosshair[(uint8)ECrosshairPosition::Top].VL);
+				CenterX - Crosshair[(uint8)ECrosshairPosition::Top].UL * UIScale / 2.f,
+				CenterY - ((AimSpread + Crosshair[(uint8)ECrosshairPosition::Top].VL) * UIScale),
+				UIScale);
 
 			// Bottom
 			Canvas->DrawIcon(Crosshair[(uint8)ECrosshairPosition::Bottom],
-				CenterX - Crosshair[(uint8)ECrosshairPosition::Bottom].UL / 2.f,
-				CenterY + AimSpread);
+				CenterX - Crosshair[(uint8)ECrosshairPosition::Bottom].UL * UIScale / 2.f,
+				CenterY + AimSpread * UIScale,
+				UIScale);
 
 			// Left
 			Canvas->DrawIcon(Crosshair[(uint8)ECrosshairPosition::Left],
-				CenterX - AimSpread - Crosshair[(uint8)ECrosshairPosition::Left].UL,
-				CenterY - Crosshair[(uint8)ECrosshairPosition::Left].VL / 2.f);
+				CenterX - ((AimSpread + Crosshair[(uint8)ECrosshairPosition::Left].UL) * UIScale),
+				CenterY - Crosshair[(uint8)ECrosshairPosition::Left].VL * UIScale / 2.f,
+				UIScale);
 
 			// Right
 			Canvas->DrawIcon(Crosshair[(uint8)ECrosshairPosition::Right],
-				CenterX + AimSpread,
-				CenterY - Crosshair[(uint8)ECrosshairPosition::Right].VL / 2.f);
+				CenterX + AimSpread * UIScale,
+				CenterY - Crosshair[(uint8)ECrosshairPosition::Right].VL * UIScale / 2.f,
+				UIScale);
 
 			// Draw hit marker if within time of last hit
 			const float SinceLastHit = GetWorld()->GetTimeSeconds() - LastWeaponHitTime;
@@ -136,8 +180,9 @@ void ABSHUD::DrawCrosshair(ABSCharacter& Character)
 				Canvas->SetDrawColor(255, 52, 52, Alpha * 255);
 
 				Canvas->DrawIcon(HitIndicator,
-					CenterX - HitIndicator.UL / 2.f,
-					CenterY - HitIndicator.VL / 2.f);
+					CenterX - HitIndicator.UL * UIScale / 2.f,
+					CenterY - HitIndicator.VL * UIScale / 2.f,
+					UIScale);
 			}
 		}
 	}
@@ -185,16 +230,88 @@ void ABSHUD::DrawDamageIndicator()
 
 			// Draw full texture 1:1 texel ratio and rotate by center
 			DrawTexture(DamageIndicator,
-				CenterX - DamageIndicator->GetSizeX() / 2.f,
-				CenterY - DamageIndicator->GetSizeY() / 2.f,
+				CenterX - DamageIndicator->GetSizeX() * UIScale / 2.f,
+				CenterY - DamageIndicator->GetSizeY() * UIScale / 2.f,
 				DamageIndicator->GetSizeX(),
 				DamageIndicator->GetSizeY(),
 				0.f, 0.f, 1.f, 1.f,
 				TextureColor,
 				BLEND_Translucent,
-				1.f, false,
+				UIScale, false,
 				FMath::RadiansToDegrees(DamageRotation),
 				FVector2D{ 0.5f, 0.5f });
 		}
 	}
 }
+
+void ABSHUD::DrawEventFeed()
+{
+	const float GameTime = GetWorld()->GetTimeSeconds();
+	EventFeed.RemoveAll([GameTime](const FEventFeedItem& Item) { return Item.ExpireTime <= GameTime; });
+
+	if (EventFeed.Num() > 0)
+	{
+		Canvas->SetDrawColor(FColor::White);
+
+		FLinearColor TeamColor{ 0.f, 0.29f, 0.57f, 1.f };
+		FLinearColor EnemyColor{ 1.f, 0.07f, .0f, 1.f };
+		FLinearColor DefaultColor = FLinearColor::White;
+
+		const FText KilledText = LOCTEXT("Killed", "killed");
+		const FText DeathText = LOCTEXT("Died", "died");
+		const FText SuicideText = LOCTEXT("Suicide", "opted out");
+
+		const FVector2D TextPadding{ 5.f * UIScale, 10.f * UIScale };
+		float OffsetY = 100.f * UIScale;
+
+		FCanvasTextItem TextItem(FVector2D::ZeroVector, FText::GetEmpty(), EventFeedFont, FLinearColor::White);
+		TextItem.Scale = FVector2D{ UIScale * 1.5f, UIScale * 1.5f };
+		TextItem.EnableShadow(FLinearColor::Black);
+
+		constexpr float TextAlphaReduction = 0.3f;
+
+		for (int32 i = EventFeed.Num() - 1; i >= 0; --i)
+		{
+			const FEventFeedItem& Event = EventFeed[i];
+
+			float OffsetX = 40.f * UIScale;
+			TextItem.Text = Event.ScorerName;
+			TextItem.SetColor((Event.bPlayerScore) ? TeamColor : EnemyColor);
+			Canvas->DrawItem(TextItem, OffsetX, OffsetY);
+			OffsetX += TextItem.DrawnSize.X + TextPadding.X;
+
+			TextItem.SetColor(DefaultColor);
+
+			if (Event.Type == EScoreType::Kill)
+			{
+				TextItem.Text = KilledText;
+				Canvas->DrawItem(TextItem, OffsetX, OffsetY);
+				OffsetX += TextItem.DrawnSize.X + TextPadding.X;
+
+				TextItem.Text = Event.VictemName;
+				TextItem.SetColor((Event.bPlayerVictim) ? TeamColor : EnemyColor);
+				Canvas->DrawItem(TextItem, OffsetX, OffsetY);
+				OffsetX += TextItem.DrawnSize.X;
+			}
+			else if (Event.Type == EScoreType::Death)
+			{
+				TextItem.Text = DeathText;
+				Canvas->DrawItem(TextItem, OffsetX, OffsetY);
+			}
+			else
+			{
+				TextItem.Text = SuicideText;
+				Canvas->DrawItem(TextItem, OffsetX, OffsetY);
+			}
+
+			OffsetY += TextPadding.Y + TextItem.DrawnSize.Y;			
+
+			// Decrease text alpha from most recent event
+			DefaultColor.A -= TextAlphaReduction;
+			EnemyColor.A -= TextAlphaReduction;
+			TeamColor.A -= TextAlphaReduction;
+		}
+	}
+}
+
+#undef LOCTEXT_NAMESPACE

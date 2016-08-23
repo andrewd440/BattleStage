@@ -52,7 +52,6 @@ public:
 	virtual TSubclassOf<class AGameSession> GetGameSessionClass() const override;
 
 protected:
-	virtual FString InitNewPlayer(class APlayerController* NewPlayerController, const TSharedPtr<const FUniqueNetId>& UniqueId, const FString& Options, const FString& Portal = TEXT("")) override;
 	virtual bool ReadyToStartMatch_Implementation() override;
 	virtual bool ReadyToEndMatch_Implementation() override;
 	virtual void HandleMatchHasEnded() override;

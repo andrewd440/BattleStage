@@ -8,6 +8,9 @@
 class UUserWidget;
 class ABSCharacter;
 
+struct FScoreEvent;
+enum class EScoreType : uint8;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnNotifyWeaponHitEvent);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnNotifyReceivedDamageEvent, FVector, IncomingDirection);
 
@@ -69,6 +72,9 @@ public:
 	virtual void BeginPlay() override;
 	/** AActor Interface End */
 
+protected:
+	virtual void OnScoreEventReceived(const FScoreEvent& ScoreEvent);
+
 private:
 	/** 
 	 * Draws the weapon spread based crosshair. The weapon hit marker
@@ -93,6 +99,11 @@ private:
 	*/
 	void DrawDamageIndicator();
 
+	/**
+	 * Draws the game event feed.
+	 */
+	void DrawEventFeed();
+
 protected:
 	/** Widget type for the HUD layout, container for in-game HUD */
 	UPROPERTY(EditDefaultsOnly, Category = HUD)
@@ -112,11 +123,11 @@ protected:
 
 	/** Sound to play on weapon hit */
 	UPROPERTY(EditDefaultsOnly, Category = HitIndication)
-	USoundBase* HitIndicatorSound;
+	USoundBase* HitIndicatorSound = nullptr;
 
 	/** Indicator used when damaged to indicate direction of incoming damage */
 	UPROPERTY(EditAnywhere, Category = DamageIndication)
-	UTexture2D* DamageIndicator;
+	UTexture2D* DamageIndicator = nullptr;
 
 	/** Seconds to display damage indicator */
 	UPROPERTY(EditDefaultsOnly, Category = DamageIndication)
@@ -124,7 +135,10 @@ protected:
 
 	/** Full screen texture applied with modulated alpha relative to current health */
 	UPROPERTY(EditAnywhere, Category = DamageIndication)
-	UTexture2D* LowHealthOverlay;
+	UTexture2D* LowHealthOverlay = nullptr;
+
+	UPROPERTY(EditAnywhere, Category = EventFeed)
+	UFont* EventFeedFont = nullptr;
 
 private:
 	UPROPERTY()
@@ -141,4 +155,24 @@ private:
 
 	/** Origin position of last damage event */
 	FVector DamageOrigin = FVector::ZeroVector;
+
+	/** Score event details used in the event feed */
+	struct FEventFeedItem
+	{
+		FText ScorerName;
+		FText VictemName;
+		EScoreType Type;
+		float ExpireTime;
+		uint32 bPlayerScore : 1; // Are we the scorer
+		uint32 bPlayerVictim : 1; // Are we the victim
+	};
+
+	/** 
+	 * Text representation of events in the event feed and the number
+	 * of seconds each event has been in the feed. 
+	 */
+	TArray<FEventFeedItem> EventFeed;
+
+	/** Scaling for the UI during a draw call. Based on scale factor relative to 1080p. */
+	float UIScale = 1.f;
 };

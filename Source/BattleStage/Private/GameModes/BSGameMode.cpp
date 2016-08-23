@@ -163,21 +163,6 @@ void ABSGameMode::HandleMatchHasEnded()
 	ReturnToMainMenuHost();
 }
 
-FString ABSGameMode::InitNewPlayer(class APlayerController* NewPlayerController, const TSharedPtr<const FUniqueNetId>& UniqueId, const FString& Options, const FString& Portal /*= TEXT("")*/)
-{ 
-	FString ReturnString = Super::InitNewPlayer(NewPlayerController, UniqueId, Options, Portal);
-
-	//if (!bIsTeamGame)
-	//{
-	//	if (ABSPlayerState* PlayerState = Cast<ABSPlayerState>(NewPlayerController->PlayerState))
-	//	{
-	//		PlayerState->SetTeam(BSGameState-);
-	//	}
-	//}
-
-	return ReturnString;
-}
-
 bool ABSGameMode::ReadyToEndMatch_Implementation()
 {
 	return WinningPlayer != nullptr || BSGameState->GetRemainingTime() <= 0;
