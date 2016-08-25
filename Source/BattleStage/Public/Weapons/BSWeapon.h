@@ -16,12 +16,12 @@ class UAnimMontage;
 UENUM()
 enum class EWeaponState
 {
-	Inactive,
-	Active,
-	Equipping,
-	Unequipping,
-	Firing,
-	Reloading
+	Inactive,		// Is not equipped
+	Active,			// Is equipped
+	Equipping,		// In equipping sequence
+	Unequipping,	// In unequipping sequence
+	Firing,			// Trigger is held
+	Reloading		// In reloading sequence
 };
 
 USTRUCT()
@@ -29,10 +29,10 @@ struct FWeaponStats
 {
 	GENERATED_USTRUCT_BODY()
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Ammo)
 	int32 MaxAmmo;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Ammo)
 	int32 ClipSize;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
@@ -46,16 +46,35 @@ struct FWeaponStats
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float ReloadSpeed;
 
+	// Determines how fast weapon spread and recoil offsets are reset after firing the weapon.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Accuracy)
+	float Stability;
+
 	// Angle, in degrees, of spread for the weapon. This is the max half cone angle that shots fired from
 	// this weapon will be directed.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(ClampMin = "0.0", ClampMax = "45.0", UIMin = "0.0", UIMax = "45.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(ClampMin = "0.0", ClampMax = "45.0", UIMin = "0.0", UIMax = "45.0"), Category = Accuracy)
 	float BaseSpread;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "45.0", UIMin = "0.0", UIMax = "45.0"))
-	float SpreadIncrementStanding;
+	// Factor added to with BaseSpread when standing
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "45.0", UIMin = "0.0", UIMax = "45.0"), Category = Accuracy)
+	float StandingSpreadIncrement;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "45.0", UIMin = "0.0", UIMax = "45.0"))
-	float SpreadIncrementMoving;
+	// Factor added to BaseSpread when moving
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "45.0", UIMin = "0.0", UIMax = "45.0"), Category = Accuracy)
+	float MovingSpreadIncrement;
+
+	// Factor added to BaseSpread per shot
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "45.0", UIMin = "0.0", UIMax = "45.0"), Category = Recoil)
+	float RecoilSpreadIncrement;
+
+	// The average direction that recoil from each shot will push the weapon.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Recoil)
+	FVector2D RecoilPush;
+
+	// Angle, in degrees, of recoil spread for the weapon. This is the max angle that RecoilPush
+	// will be offset when calculating the final recoil push direction for each shot.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Recoil)
+	float RecoilPushSpread;
 
 	// If the weapon is fully automatic or single shot
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
@@ -150,9 +169,56 @@ public:
 	/** AActor interface end */
 
 protected:
-	virtual FVector GetFireLocation_Implementation() const;
-	virtual FRotator GetFireRotation_Implementation() const;
+	//-----------------------------------------------------------------
+	// Weapon Events
+	//-----------------------------------------------------------------
 
+	/**
+	* Called after a shot has been fired by the weapon. Called on all clients when
+	* notified that a shot has occurred on the server or called on local player when
+	* fired locally.
+	*
+	* Gives the opportunity to activate visual effects or weapon stat effects
+	* that should be applied following a shot.
+	*/
+	virtual void OnShotFired();
+
+	/**
+	* Called when the weapon state has been transition into the Firing state.
+	*/
+	virtual void OnEnteredFiringState();
+
+	/**
+	* Called when the weapon state has been transition out of Firing state.
+	*/
+	virtual void OnExitFiringState();
+
+	/**
+	* Called when the weapon state has been transition into the Equipping state.
+	*/
+	virtual void OnEnteredEquippingState();
+
+	/**
+	* Called when the weapon state has been transition into the Active state.
+	*/
+	virtual void OnEnteredActiveState();
+
+	/**
+	* Called when the weapon state has been transition into the Unequipping state.
+	*/
+	virtual void OnEnteredUnequippingState();
+
+	/**
+	* Called when the weapon state has been transition into the reloading state.
+	*/
+	virtual void OnEnteredReloadingState();
+
+	/**
+	* Called when the weapon state has been transition into the Inactive state.
+	*/
+	virtual void OnEnteredInactiveState();
+
+protected:
 	// Owning client only.
 	void FireShot();
 
@@ -161,6 +227,7 @@ protected:
 	/**
 	* Starts the equip sequence. Activates effects that should be played on clients, 
 	* animations, sounds, etc.
+	* 
 	* @return The length of the sequence in seconds. If <0, OnEquipFinished will
 	*			need to be called manually.
 	*/
@@ -169,39 +236,36 @@ protected:
 	/**
 	* Starts the unequip sequence. Activates effects that should be played on clients, 
 	* animations, sounds, etc.
+
 	* @return The length of the sequence in seconds. If <0, OnUnequipFinished will
 	*			need to be called manually.
 	*/
 	virtual float PlayUnequipSequence();
 
 	/**
+	* Plays the fire effects for the weapon only. This includes things such as muzzle flash,
+	* sounds, and weapon animations.
+	*/
+	virtual void PlayFiringSequence();
+
+	/**
 	* Starts the reload sequence. Activates effects that should be played on clients, 
 	* animations, sounds, etc.
-	* @return The length of the sequence in seconds. If <0, OnReloadFinished will
+	* 
+	* @return The length of the sequence in seconds. If < 0, OnReloadFinished will
 	*			need to be called manually.
 	*/
 	virtual float PlayReloadSequence();
 
 	/**
-	* Starts the fire sequence. Activates effects that should be played on clients, 
-	* animations, sounds, etc.
-	*/
-	virtual void PlayBeginFireSequence();
-
-	/**
-	* Ends the fire sequence. Activates/Deactivates effects that should be/was played on clients, 
-	* animations, sounds, etc.
-	*/
-	virtual void PlayEndFireSequence();
-
-	/**
 	* Plays sequence that occurs when a attempt to fire that weapon has been made, but the
-	* weapon is out of ammo.
+	* weapon is out of ammo. Activates/Deactivates effects that should be/was played on clients, 
+	* animations, sounds, etc.
 	*/
 	virtual void PlayEmptyClipSequence();
 
 	//-----------------------------------------------------------------
-	// Weapon state transitions
+	// Weapon state transitions (Server Only)
 	//-----------------------------------------------------------------
 
 	/**
@@ -219,31 +283,30 @@ protected:
 	UFUNCTION(Server, Reliable, WithValidation)
 	virtual void ServerHandleNewWeaponState(const EWeaponState State);
 
-	UFUNCTION(Client, Reliable)
-	virtual void ClientEnteredFiringState();
-
-	UFUNCTION(Client, Reliable)
-	virtual void ClientExitFiringState();
-
 	/**
 	* Server only. Called when the equip sequence has finished and
 	* should be transitioned to the Active state.
 	*/
-	virtual void OnEquipFinished();
+	virtual void OnEquipSequenceFinished();
 
 	/**
 	* Server only. Called when the reload sequence has finished and
 	* should be  transitioned to the next state, Active by default.
-	* Reload effects such as adding ammo to the clip should be done here.
+	* Reload data changes such as adding ammo to the clip should be done here.
 	*/
-	virtual void OnReloadFinished();
+	virtual void OnReloadSequenceFinished();
 
 	/**
 	* Server only. Called when the unequip sequence has finished and
 	* should be transitioned to the Inactive state.
 	*/
-	virtual void OnUnquipFinished();
+	virtual void OnUnquipSequenceFinished();
 
+	/**
+	* Server only. Called when the empty clip sequence has finished and
+	* should be transitioned to the Active state.
+	*/
+	virtual void OnEmptyClipSequenceFinished();
 
 private:
 	/**
@@ -317,6 +380,12 @@ protected:
 	// Game time when the last shot was fired.
 	float LastFireTime = 0.f;
 
+	// Accumulator for recoil spread applied per shot
+	float CurrentRecoilSpread = 0.f;
+
+	// Accumulator for recoil push offset applied per shot
+	FVector2D CurrentRecoilOffset = FVector2D::ZeroVector;
+
 private:
 	// Toggle flag that indicates that the server fired a shot when changed.
 	// Should not be interpreted as true/false.
@@ -344,10 +413,6 @@ protected:
 	// Spawned component used to play FireSound and manipulate looping sounds.
 	UPROPERTY(Transient)
 	UAudioComponent* FireSoundComponent = nullptr;
-
-	// Sound effect on weapon begin fire
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Sound)
-	USoundBase* BeginFireSound = nullptr;
 
 	// Sound effect when the weapon is fire. This audio will loop while in the
 	// firing weapon state if it is a looping sound. Otherwise, it will be played
@@ -383,6 +448,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation)
 	FWeaponAnim FireAnim;
 
+	// Camera shake on weapon fire
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation)
+	TSubclassOf<class UCameraShake> FireCameraShake;
+
 	// Played on the character on reload
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation)
 	FWeaponAnim ReloadAnim;
@@ -399,15 +468,6 @@ protected:
 	UPROPERTY(Transient)
 	class UParticleSystemComponent* MuzzleFXComponent = nullptr;
 
-protected:	
-
-	/**
-	* Plays the fire effects for the weapon. Only plays effect for the
-	* weapon, not projectile. This includes things such as muzzle flash
-	* and sounds.
-	*/
-	virtual void PlayFireEffects();
-
 private:
 
 	//-----------------------------------------------------------------
@@ -415,10 +475,11 @@ private:
 	//-----------------------------------------------------------------
 	
 	UFUNCTION()
-	virtual void OnRep_ServerFired();
+	void OnRep_ServerFired();
 
+	/** Invokes state transition events on clients */
 	UFUNCTION()
-	virtual void OnRep_WeaponState();
+	void OnRep_WeaponState();
 
 	UFUNCTION()
 	virtual void OnRep_BSCharacter();

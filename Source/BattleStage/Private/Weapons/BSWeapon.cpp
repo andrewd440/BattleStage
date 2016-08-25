@@ -15,6 +15,11 @@ ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 	, MuzzleSocket(TEXT("MuzzleAttach"))
 	, ShotTypeClass(nullptr)
 {
+	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+	bCanBeDamaged = false;
+	bNetUseOwnerRelevancy = true;
+
 	// First person weapon mesh
 	MeshFP = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshFP"));
 	MeshFP->SetCollisionProfileName("CharacterMesh");
@@ -35,19 +40,19 @@ ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 	MeshTP->bOwnerNoSee = true;
 	MeshTP->SetupAttachment(RootComponent);
 
-	bReplicates = true;
-	bCanBeDamaged = false;
-	bNetUseOwnerRelevancy = true;
-
 	// Default weapon fire data
 	WeaponStats.MaxAmmo = 120;
 	WeaponStats.ClipSize = 30;
-	WeaponStats.BaseDamage = 5.0f;
+	WeaponStats.BaseDamage = 5.f;
 	WeaponStats.FireRate = 0.1f;
-	WeaponStats.BaseSpread = 2.0f;
-	WeaponStats.SpreadIncrementStanding = 1.0f;
-	WeaponStats.SpreadIncrementMoving = 1.0f;
-	WeaponStats.ReloadSpeed = 2.0f;
+	WeaponStats.Stability = 1.f;
+	WeaponStats.BaseSpread = 2.f;
+	WeaponStats.StandingSpreadIncrement = 1.5f;
+	WeaponStats.MovingSpreadIncrement = 2.f;
+	WeaponStats.RecoilSpreadIncrement = 0.5f;
+	WeaponStats.RecoilPush = FVector2D{ 0, 1 };
+	WeaponStats.RecoilPushSpread = 10.f;	
+	WeaponStats.ReloadSpeed = 2.f;
 	WeaponStats.bIsAuto = true;
 }
 
@@ -103,6 +108,23 @@ void ABSWeapon::BeginPlay()
 void ABSWeapon::Tick( float DeltaTime )
 {
 	Super::Tick( DeltaTime );
+
+	if (CurrentRecoilSpread > 0.f)
+	{
+		// Reduce recoil spread
+		CurrentRecoilSpread = FMath::Max(0.f, CurrentRecoilSpread - WeaponStats.Stability * DeltaTime);
+	}
+	
+	if (CurrentRecoilOffset.GetAbsMax() > DELTA)
+	{
+		// Lerp recoil offset to zero
+		const FVector2D NewRecoilOffset = FMath::Lerp(CurrentRecoilOffset, FVector2D::ZeroVector, DeltaTime * WeaponStats.Stability);
+
+		BSCharacter->AddControllerPitchInput(CurrentRecoilOffset.Y - NewRecoilOffset.Y);
+		BSCharacter->AddControllerYawInput(NewRecoilOffset.X - CurrentRecoilOffset.X);
+
+		CurrentRecoilOffset = NewRecoilOffset;
+	}
 }
 
 void ABSWeapon::AttachToOwner()
@@ -161,12 +183,12 @@ float ABSWeapon::GetCurrentSpread() const
 {
 	// Get spread factor based on movement
 	const float MovementFactor = BSCharacter->GetVelocity().Size() / BSCharacter->GetMovementComponent()->GetMaxSpeed();
-	const float MovementSpread = MovementFactor * WeaponStats.SpreadIncrementMoving;
+	const float MovementSpread = MovementFactor * WeaponStats.MovingSpreadIncrement;
 
 	// Get spread factor based on crouch/standing
-	const float StandingSpread = BSCharacter->bIsCrouched ? 0.f : WeaponStats.SpreadIncrementStanding;
+	const float StandingSpread = BSCharacter->bIsCrouched ? 0.f : WeaponStats.StandingSpreadIncrement;
 
-	return WeaponStats.BaseSpread + MovementSpread + StandingSpread;
+	return WeaponStats.BaseSpread + MovementSpread + StandingSpread + CurrentRecoilSpread;
 }
 
 UAnimMontage* ABSWeapon::GetWeaponMontage(const FWeaponAnim& WeaponAnim)
@@ -174,11 +196,12 @@ UAnimMontage* ABSWeapon::GetWeaponMontage(const FWeaponAnim& WeaponAnim)
 	return (BSCharacter->IsFirstPerson()) ? WeaponAnim.FirstPerson : WeaponAnim.ThirdPerson;
 }
 
-void ABSWeapon::PlayFireEffects()
+void ABSWeapon::PlayFiringSequence()
 {
-	if (MuzzleFX && (!MuzzleFX->IsLooping() || !MuzzleFXComponent))
+	const bool bMustSpawnFX = (!MuzzleFX->IsLooping() || !MuzzleFXComponent);
+	if (MuzzleFX && bMustSpawnFX)
 	{
-		if (!MuzzleFXComponent)
+		if (bMustSpawnFX)
 		{
 			MuzzleFXComponent = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, GetActiveMesh(), MuzzleSocket);
 		}			
@@ -186,17 +209,31 @@ void ABSWeapon::PlayFireEffects()
 		MuzzleFXComponent->Activate(true);
 	}
 
-	if (FireSound && (!FireSound->IsLooping() || !FireSoundComponent))
+	const bool bMustSpawnSound = (!FireSound->IsLooping() || !FireSoundComponent);
+	if (FireSound && bMustSpawnSound)
 	{
-		if(!FireSoundComponent)
+		if (bMustSpawnSound)
+		{
 			FireSoundComponent = UGameplayStatics::SpawnSoundAttached(FireSound, GetActiveMesh(), MuzzleSocket);
+		}			
 		
 		FireSoundComponent->Play();
 	}
 
-	UAnimMontage* FireMontage = GetWeaponMontage(FireAnim);
-	if (FireMontage)
+	if (UAnimMontage* FireMontage = GetWeaponMontage(FireAnim))
+	{
 		BSCharacter->PlayAnimMontage(FireMontage);
+	}
+
+	BSCharacter->AddControllerPitchInput(-.1f);
+
+	if (FireCameraShake &&
+		BSCharacter->IsFirstPerson() &&
+		BSCharacter->IsLocallyControlled())
+	{
+		APlayerController* const PlayerController = static_cast<APlayerController* const>(BSCharacter->GetController());
+		PlayerController->ClientPlayCameraShake(FireCameraShake);
+	}
 }
 
 void ABSWeapon::SetWeaponState(EWeaponState State)
@@ -245,9 +282,6 @@ void ABSWeapon::HandleNewWeaponState(const EWeaponState State)
 	}
 	else
 	{
-		if (WeaponState == EWeaponState::Firing)
-			ClientExitFiringState();
-
 		WeaponState = State;
 
 		FTimerManager& TimerManager = GetWorldTimerManager();
@@ -260,11 +294,11 @@ void ABSWeapon::HandleNewWeaponState(const EWeaponState State)
 				const float SequenceLength = PlayEquipSequence();
 				if (SequenceLength > 0)
 				{
-					TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnEquipFinished, SequenceLength);
+					TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnEquipSequenceFinished, SequenceLength);
 				}
 				else if (SequenceLength == 0)
 				{
-					OnEquipFinished();
+					OnEquipSequenceFinished();
 				}
 				break;
 			}
@@ -273,11 +307,11 @@ void ABSWeapon::HandleNewWeaponState(const EWeaponState State)
 				const float SequenceLength = PlayUnequipSequence();
 				if (SequenceLength > 0)
 				{
-					TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnUnquipFinished, SequenceLength);
+					TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnUnquipSequenceFinished, SequenceLength);
 				}
 				else if (SequenceLength == 0)
 				{
-					OnUnquipFinished();
+					OnUnquipSequenceFinished();
 				}
 				break;
 			}
@@ -286,18 +320,13 @@ void ABSWeapon::HandleNewWeaponState(const EWeaponState State)
 				const float SequenceLength = PlayReloadSequence();
 				if (SequenceLength > 0)
 				{
-					TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnReloadFinished, SequenceLength);
+					TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnReloadSequenceFinished, SequenceLength);
 				}
 				else if (SequenceLength == 0)
 				{
-					OnReloadFinished();
+					OnReloadSequenceFinished();
 				}
 				break;
-			}
-		case EWeaponState::Firing:
-			{
-				ClientEnteredFiringState();
-				break;				
 			}
 		}
 		
@@ -316,18 +345,31 @@ bool ABSWeapon::ServerHandleNewWeaponState_Validate(const EWeaponState State)
 	return true;
 }
 
-void ABSWeapon::ClientEnteredFiringState_Implementation()
+void ABSWeapon::OnEquipSequenceFinished()
 {
-	// Use delay to prevent tap firing faster than the fire rate of the weapon.
-	const float CurrentTime = GetWorld()->GetTimeSeconds();
-	const float ShotDelay = FMath::Max(0.f, WeaponStats.FireRate - (CurrentTime - LastFireTime));
-
-	GetWorldTimerManager().SetTimer(WeaponFiringTimer, this, &ABSWeapon::FireShot, WeaponStats.FireRate, WeaponStats.bIsAuto, ShotDelay);
+	SetWeaponState(EWeaponState::Active);
 }
 
-void ABSWeapon::ClientExitFiringState_Implementation()
+void ABSWeapon::OnReloadSequenceFinished()
 {
-	GetWorldTimerManager().ClearTimer(WeaponFiringTimer);
+	const int32 EmptySlots = WeaponStats.ClipSize - RemainingClip;
+	const int32 RefillCount = FMath::Min(RemainingAmmo, EmptySlots);
+	RemainingClip += RefillCount;
+	RemainingAmmo -= RefillCount;
+	SetWeaponState(EWeaponState::Active);
+}
+
+void ABSWeapon::OnUnquipSequenceFinished()
+{
+	SetWeaponState(EWeaponState::Inactive);
+	DetachRootComponentFromParent();
+
+	BSCharacter = nullptr;
+}
+
+void ABSWeapon::OnEmptyClipSequenceFinished()
+{
+
 }
 
 void ABSWeapon::FireShot()
@@ -367,7 +409,7 @@ void ABSWeapon::InvokeShot(const FShotData& ShotData)
 	if (!HasAuthority())
 	{
 		ServerInvokeShot(ShotData);
-		PlayFireEffects();
+		OnShotFired();
 	}
 	else
 	{
@@ -395,33 +437,58 @@ void ABSWeapon::InvokeShot(const FShotData& ShotData)
 	}
 }
 
-void ABSWeapon::ServerInvokeShot_Implementation(const FShotData& ShotData)
+void ABSWeapon::OnShotFired()
 {
-	InvokeShot(ShotData);
-}
+	PlayFiringSequence();
 
-bool ABSWeapon::ServerInvokeShot_Validate(const FShotData& ShotData)
-{
-	return true;
-}
+	CurrentRecoilSpread += WeaponStats.RecoilSpreadIncrement;
 
-void ABSWeapon::PlayBeginFireSequence()
-{
-	if (BeginFireSound)
+	if (BSCharacter->IsLocallyControlled())
 	{
-		UGameplayStatics::SpawnSoundAttached(BeginFireSound, RootComponent);
+		// Only apply recoil to player if locally controlled. Replicated
+		// view direction will allow this to replicate to all clients.		
+		const int32 Seed = FMath::Rand();
+		FRandomStream RecoilOffsetStream(Seed);
+
+		// Get random rotation [-1, 1] to factor in with RecoilPushSpread and
+		// apply the rotation to RecoilPush
+		const float RSeed = 2.f * FMath::FRand() - 1.f;
+		const float Rotation = RSeed * WeaponStats.RecoilPushSpread;
+		const FVector2D RecoilInput = WeaponStats.RecoilPush.GetRotated(Rotation);
+
+		BSCharacter->AddControllerPitchInput(-RecoilInput.Y);
+		BSCharacter->AddControllerYawInput(RecoilInput.X);
+
+		CurrentRecoilOffset += RecoilInput;
 	}
 }
 
-void ABSWeapon::PlayEndFireSequence()
+void ABSWeapon::OnEnteredFiringState()
 {
-	if (MuzzleFXComponent)
+	if (BSCharacter->IsLocallyControlled())
+	{
+		// Use delay to prevent tap firing faster than the fire rate of the weapon.
+		const float CurrentTime = GetWorld()->GetTimeSeconds();
+		const float ShotDelay = FMath::Max(0.f, WeaponStats.FireRate - (CurrentTime - LastFireTime));
+
+		GetWorldTimerManager().SetTimer(WeaponFiringTimer, this, &ABSWeapon::FireShot, WeaponStats.FireRate, WeaponStats.bIsAuto, ShotDelay);
+	}
+}
+
+void ABSWeapon::OnExitFiringState()
+{
+	if (BSCharacter->IsLocallyControlled())
+	{
+		GetWorldTimerManager().ClearTimer(WeaponFiringTimer);
+	}
+
+	if (MuzzleFXComponent && MuzzleFX->IsLooping())
 	{
 		MuzzleFXComponent->DeactivateSystem();
 		MuzzleFXComponent = nullptr;
 	}
 
-	if (FireSoundComponent)
+	if (FireSoundComponent && FireSound->IsLooping())
 	{
 		FireSoundComponent->FadeOut(0.1f, 0.0f);
 		FireSoundComponent = nullptr;
@@ -433,34 +500,47 @@ void ABSWeapon::PlayEndFireSequence()
 	}
 }
 
+void ABSWeapon::OnEnteredEquippingState()
+{
+	PlayEquipSequence();
+}
+
+void ABSWeapon::OnEnteredActiveState()
+{
+	// Do nothing... for now
+}
+
+void ABSWeapon::OnEnteredUnequippingState()
+{
+	PlayUnequipSequence();
+}
+
+void ABSWeapon::OnEnteredReloadingState()
+{
+	PlayReloadSequence();
+}
+
+void ABSWeapon::OnEnteredInactiveState()
+{
+	// Do nothing... for now
+}
+
+void ABSWeapon::ServerInvokeShot_Implementation(const FShotData& ShotData)
+{
+	InvokeShot(ShotData);
+}
+
+bool ABSWeapon::ServerInvokeShot_Validate(const FShotData& ShotData)
+{
+	return true;
+}
+
 void ABSWeapon::PlayEmptyClipSequence()
 {
 	if (EmptyClipSound)
 	{
 		UGameplayStatics::SpawnSoundAttached(EmptyClipSound, RootComponent);
 	}
-}
-
-void ABSWeapon::OnEquipFinished()
-{
-	SetWeaponState(EWeaponState::Active);
-}
-
-void ABSWeapon::OnReloadFinished()
-{
-	const int32 EmptySlots = WeaponStats.ClipSize - RemainingClip;
-	const int32 RefillCount = FMath::Min(RemainingAmmo, EmptySlots);
-	RemainingClip += RefillCount;
-	RemainingAmmo -= RefillCount;
-	SetWeaponState(EWeaponState::Active);
-}
-
-void ABSWeapon::OnUnquipFinished()
-{
-	SetWeaponState(EWeaponState::Inactive);
-	DetachRootComponentFromParent();
-
-	BSCharacter = nullptr;
 }
 
 bool ABSWeapon::CanFire() const
@@ -494,28 +574,36 @@ void ABSWeapon::OnRep_ServerFired()
 	// Make sure we are still firing to prevent incorrect behavior
 	// from replication order when ServerFired and WeaponState are changed
 	// at the same time.
-	if(WeaponState == EWeaponState::Firing)
-		PlayFireEffects();
+	if (WeaponState == EWeaponState::Firing)
+		OnShotFired();
 }
 
 void ABSWeapon::OnRep_WeaponState()
 {
 	if (PrevWeaponState == EWeaponState::Firing)
-		PlayEndFireSequence();
+		OnExitFiringState();
 
 	switch (WeaponState)
 	{
+	case EWeaponState::Inactive:
+		OnEnteredInactiveState();
+		break;
 	case EWeaponState::Equipping:
-		PlayEquipSequence();
+		OnEnteredEquippingState();
+		break;
+	case EWeaponState::Active:
+		OnEnteredActiveState();
 		break;
 	case EWeaponState::Unequipping:
-		PlayUnequipSequence();
-		break;
-	case EWeaponState::Reloading:
-		PlayReloadSequence();
+		OnEnteredUnequippingState();
 		break;
 	case EWeaponState::Firing:
-		PlayBeginFireSequence();
+		OnEnteredFiringState();
+		break;
+	case EWeaponState::Reloading:
+		OnEnteredReloadingState();
+		break;
+	default:
 		break;
 	}
 
