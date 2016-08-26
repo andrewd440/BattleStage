@@ -104,6 +104,11 @@ private:
 	 */
 	void DrawEventFeed();
 
+	/**
+	 * Draws game event messages that include the owning character.
+	 */
+	void DrawPersonalEventMessage();
+
 protected:
 	/** Widget type for the HUD layout, container for in-game HUD */
 	UPROPERTY(EditDefaultsOnly, Category = HUD)
@@ -137,8 +142,31 @@ protected:
 	UPROPERTY(EditAnywhere, Category = DamageIndication)
 	UTexture2D* LowHealthOverlay = nullptr;
 
+	/** Font used for large HUD text (i.e. personal messages) */
 	UPROPERTY(EditAnywhere, Category = EventFeed)
-	UFont* EventFeedFont = nullptr;
+	UFont* LargeFont = nullptr;
+	
+	/** Font used for normal HUD text (i.e. event feed) */
+	UPROPERTY(EditAnywhere, Category = EventFeed)
+	UFont* NormalFont = nullptr;
+
+private:
+	/** Score event details used in the event feed */
+	struct FEventFeedItem
+	{
+		FText ScorerName;
+		FText VictemName;
+		EScoreType Type;
+		float ExpireTime = 0;
+		uint32 bPlayerScore : 1; // Are we the scorer
+		uint32 bPlayerVictim : 1; // Are we the victim
+	};
+
+	struct FPersonalMessage
+	{
+		FText Message;
+		float ExpireTime = 0;
+	};
 
 private:
 	UPROPERTY()
@@ -156,22 +184,17 @@ private:
 	/** Origin position of last damage event */
 	FVector DamageOrigin = FVector::ZeroVector;
 
-	/** Score event details used in the event feed */
-	struct FEventFeedItem
-	{
-		FText ScorerName;
-		FText VictemName;
-		EScoreType Type;
-		float ExpireTime;
-		uint32 bPlayerScore : 1; // Are we the scorer
-		uint32 bPlayerVictim : 1; // Are we the victim
-	};
-
 	/** 
 	 * Text representation of events in the event feed and the number
 	 * of seconds each event has been in the feed. 
 	 */
 	TArray<FEventFeedItem> EventFeed;
+
+	/** 
+	 * The last event that included the owning player. Used to display personal 
+	 * game event messages. 
+	 */
+	FPersonalMessage LastPersonalMessage;
 
 	/** Scaling for the UI during a draw call. Based on scale factor relative to 1080p. */
 	float UIScale = 1.f;

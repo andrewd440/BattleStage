@@ -91,6 +91,8 @@ void ABSHUD::OnScoreEventReceived(const FScoreEvent& ScoreEvent)
 		EventFeed.RemoveAt(1, 1, false);
 	}
 
+	// Construct event feed item
+	const float GameTime = GetWorld()->GetTimeSeconds();
 	FEventFeedItem FeedItem;
 	FeedItem.ExpireTime = GetWorld()->GetTimeSeconds() + EventFeedItemLifetime;
 	FeedItem.ScorerName = FText::FromString(ScoreEvent.Scorer->PlayerName);
@@ -106,7 +108,39 @@ void ABSHUD::OnScoreEventReceived(const FScoreEvent& ScoreEvent)
 		FeedItem.bPlayerVictim = false;
 	}
 
-	FeedItem.Type = ScoreEvent.Type;
+	FeedItem.Type = ScoreEvent.Type;	
+	
+	// Construct personal message if needed
+	{
+		const FString KilledText = TEXT("Killed ");
+		const FString DeathText = TEXT("Died");
+		const FString SuicideText = TEXT("Self Execution");
+		const FString KilledByText = TEXT("Killed by ");
+
+		FString MessageText;
+		if (FeedItem.bPlayerScore)
+		{
+			if (FeedItem.Type == EScoreType::Kill)
+			{
+				MessageText = KilledText + ScoreEvent.Victim->PlayerName;
+			}
+			else if (FeedItem.Type == EScoreType::Death)
+			{
+				MessageText = DeathText;
+			}
+			else
+			{
+				MessageText = SuicideText;
+			}
+		}
+		else if (FeedItem.bPlayerVictim)
+		{
+			MessageText = KilledByText + ScoreEvent.Scorer->PlayerName;
+		}
+
+		LastPersonalMessage.Message = FText::FromString(MessageText);
+		LastPersonalMessage.ExpireTime = GameTime + EventFeedItemLifetime;
+	}
 
 	EventFeed.Add(std::move(FeedItem));
 }
@@ -125,6 +159,7 @@ void ABSHUD::DrawHUD()
 
 	DrawDamageIndicator();
 	DrawEventFeed();
+	DrawPersonalEventMessage();
 }
 
 void ABSHUD::DrawCrosshair(ABSCharacter& Character)
@@ -264,8 +299,8 @@ void ABSHUD::DrawEventFeed()
 		const FVector2D TextPadding{ 5.f * UIScale, 10.f * UIScale };
 		float OffsetY = 100.f * UIScale;
 
-		FCanvasTextItem TextItem(FVector2D::ZeroVector, FText::GetEmpty(), EventFeedFont, FLinearColor::White);
-		TextItem.Scale = FVector2D{ UIScale * 1.5f, UIScale * 1.5f };
+		FCanvasTextItem TextItem(FVector2D::ZeroVector, FText::GetEmpty(), NormalFont, FLinearColor::White);
+		TextItem.Scale = FVector2D{ UIScale, UIScale };
 		TextItem.EnableShadow(FLinearColor::Black);
 
 		constexpr float TextAlphaReduction = 0.3f;
@@ -311,6 +346,32 @@ void ABSHUD::DrawEventFeed()
 			EnemyColor.A -= TextAlphaReduction;
 			TeamColor.A -= TextAlphaReduction;
 		}
+	}
+}
+
+void ABSHUD::DrawPersonalEventMessage()
+{
+	const float GameTime = GetWorld()->GetTimeSeconds();
+	if (GameTime <= LastPersonalMessage.ExpireTime)
+	{
+		Canvas->SetDrawColor(FColor::White);
+
+		FCanvasTextItem TextItem{ FVector2D::ZeroVector, LastPersonalMessage.Message, LargeFont, FLinearColor::White };
+		TextItem.Scale = FVector2D{ UIScale, UIScale };
+		TextItem.EnableShadow(FLinearColor::Black);
+
+		float CenterX, CenterY;
+		Canvas->GetCenter(CenterX, CenterY);
+
+		FVector2D TextSize;
+		Canvas->StrLen(LargeFont, LastPersonalMessage.Message.ToString(), TextSize.X, TextSize.Y);
+
+		const FVector2D BaseDrawPosition{ CenterX, Canvas->ClipY - (200.f * UIScale) };
+		const FVector2D DrawPositionOffset{ TextSize.X / 2.f, TextSize.Y / 2.f };
+
+		TextItem.Position = BaseDrawPosition - DrawPositionOffset * TextItem.Scale;
+
+		Canvas->DrawItem(TextItem);		
 	}
 }
 

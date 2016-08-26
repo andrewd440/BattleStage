@@ -31,7 +31,7 @@ struct FReceiveHitInfo
 	UPROPERTY(BlueprintReadOnly, Category = RecieveHitInfo)
 	FVector_NetQuantize10 HitLocation;
 
-	/** Bone that was hit */
+	/** Direction the hit came from */
 	UPROPERTY(BlueprintReadOnly, Category = RecieveHitInfo)
 	FVector_NetQuantizeNormal HitDirection;
 
@@ -81,6 +81,9 @@ public:
 	virtual void ToggleRunning();
 
 	void ReloadWeapon();
+
+	/** Gets info describing the last received damage hit on this character. */
+	const FReceiveHitInfo& GetLastHitInfo() const;
 
 	/**
 	* Returns the dominate mesh used for this character. Will be the first person mesh

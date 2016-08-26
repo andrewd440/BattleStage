@@ -163,6 +163,11 @@ void ABSCharacter::ReloadWeapon()
 		Weapon->Reload();
 }
 
+const FReceiveHitInfo& ABSCharacter::GetLastHitInfo() const
+{
+	return ReceiveHitInfo;
+}
+
 USkeletalMeshComponent* ABSCharacter::GetActiveMesh() const
 {
 	return IsFirstPerson() ? FirstPersonMesh : GetThirdPersonMesh();

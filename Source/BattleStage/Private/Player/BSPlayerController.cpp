@@ -29,10 +29,13 @@ void ABSPlayerController::UnFreeze()
 void ABSPlayerController::PawnPendingDestroy(APawn* inPawn)
 {
 	APawn* const Pawn = GetPawn();
-	FVector DeathLocation = Pawn->GetActorLocation() + FVector{ 0, 0, 300 };
+	FVector DeathLocation = Pawn->GetActorLocation();
 	FRotator CameraRotation{ -90.f, 0, 0 };
 
-	// #bstodo Get better camera view and location
+	if (ABSCharacter* Character = Cast<ABSCharacter>(inPawn))
+	{
+		CameraRotation = Character->GetLastHitInfo().HitDirection.Rotation();
+	}
 
 	Super::PawnPendingDestroy(inPawn);
 
