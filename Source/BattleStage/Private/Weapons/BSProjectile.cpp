@@ -5,7 +5,7 @@
 
 #include "GameFramework/ProjectileMovementComponent.h"
 
-#include "BSImpactEffect.h"
+#include "BSExplosion.h"
 
 ABSProjectile::ABSProjectile() 
 {
@@ -39,12 +39,13 @@ ABSProjectile::ABSProjectile()
 
 void ABSProjectile::OnImpact(const FHitResult& Hit)
 {
-	if (ImpactEffect)
+	if (ExplosionEffect)
 	{
-		const FTransform SpawnTransform = GetTransform();
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Instigator = GetInstigator();
+		SpawnParams.Owner = this;
 
-		UBSImpactEffect* ImpactObject = ImpactEffect->GetDefaultObject<UBSImpactEffect>();
-		ImpactObject->SpawnEffect(GetWorld(), Hit);
+		GetWorld()->SpawnActor<ABSExplosion>(ExplosionEffect, GetActorLocation(), FRotator::ZeroRotator, SpawnParams);
 	}
 
 	if (HasAuthority())
@@ -52,7 +53,17 @@ void ABSProjectile::OnImpact(const FHitResult& Hit)
 		TArray<AActor*> ToIgnore;
 		ToIgnore.Add(this);
 
-		bool bDamagedActor = UGameplayStatics::ApplyRadialDamageWithFalloff(this, Damage.BaseDamage, Damage.MinimumDamage, GetActorLocation(), Damage.InnerRadius, Damage.OuterRadius, Damage.DamageFalloff, DamageTypeClass, ToIgnore);
+		bool bDamagedActor = UGameplayStatics::ApplyRadialDamageWithFalloff(this, 
+			Damage.BaseDamage, 
+			Damage.MinimumDamage, 
+			GetActorLocation(), 
+			Damage.InnerRadius, 
+			Damage.OuterRadius, 
+			Damage.DamageFalloff, 
+			DamageTypeClass, 
+			ToIgnore,
+			this,
+			GetInstigatorController());
 
 		Destroy();
 	}

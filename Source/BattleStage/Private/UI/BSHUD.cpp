@@ -117,28 +117,29 @@ void ABSHUD::OnScoreEventReceived(const FScoreEvent& ScoreEvent)
 		const FString SuicideText = TEXT("Self Execution");
 		const FString KilledByText = TEXT("Killed by ");
 
-		FString MessageText;
+		FString MessageString;
 		if (FeedItem.bPlayerScore)
 		{
 			if (FeedItem.Type == EScoreType::Kill)
 			{
-				MessageText = KilledText + ScoreEvent.Victim->PlayerName;
+				MessageString = KilledText + ScoreEvent.Victim->PlayerName;
+				MessageString += FString::Printf(TEXT("  +%d"), ScoreEvent.ScorerPoints);
 			}
 			else if (FeedItem.Type == EScoreType::Death)
 			{
-				MessageText = DeathText;
+				MessageString = DeathText;
 			}
 			else
 			{
-				MessageText = SuicideText;
+				MessageString = SuicideText;
 			}
 		}
 		else if (FeedItem.bPlayerVictim)
 		{
-			MessageText = KilledByText + ScoreEvent.Scorer->PlayerName;
+			MessageString = KilledByText + ScoreEvent.Scorer->PlayerName;
 		}
 
-		LastPersonalMessage.Message = FText::FromString(MessageText);
+		LastPersonalMessage.Message = FText::FromString(MessageString);
 		LastPersonalMessage.ExpireTime = GameTime + EventFeedItemLifetime;
 	}
 
@@ -366,7 +367,7 @@ void ABSHUD::DrawPersonalEventMessage()
 		FVector2D TextSize;
 		Canvas->StrLen(LargeFont, LastPersonalMessage.Message.ToString(), TextSize.X, TextSize.Y);
 
-		const FVector2D BaseDrawPosition{ CenterX, Canvas->ClipY - (200.f * UIScale) };
+		const FVector2D BaseDrawPosition{ CenterX, Canvas->ClipY - (300.f * UIScale) };
 		const FVector2D DrawPositionOffset{ TextSize.X / 2.f, TextSize.Y / 2.f };
 
 		TextItem.Position = BaseDrawPosition - DrawPositionOffset * TextItem.Scale;

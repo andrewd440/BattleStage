@@ -17,16 +17,16 @@ class BATTLESTAGE_API UBSHUDWidget_Ammo : public UBSHUDWidget
 protected:
 	/** UUserWidget Interface Begin */
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
-	virtual void NativeConstruct() override;
 	/** UUserWidget Interface End */
 
 protected:
-	UPROPERTY(BlueprintReadOnly, Category = AmmoWidget)
-	int32 RemainingAmmo;
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* RemainingAmmoText;
 
-	UPROPERTY(BlueprintReadOnly, Category = AmmoWidget)
-	int32 RemainingClip;
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* RemainingClipText;
 
-	UPROPERTY(BlueprintReadOnly, Category = AmmoWidget)
-	TWeakObjectPtr<class ABSCharacter> BSCharacter;
+private:
+	int32 RemainingAmmo = 0; // Cached ammo count that is reflected on widget
+	int32 RemainingClip = 0; // Cached ammo count that is reflected on widget
 };

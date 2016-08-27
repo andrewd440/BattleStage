@@ -27,6 +27,9 @@ struct FScoreEvent
 	TWeakObjectPtr<ABSPlayerState> Scorer;
 
 	UPROPERTY()
+	uint8 ScorerPoints; // Points rewarded to the scorer
+
+	UPROPERTY()
 	TWeakObjectPtr<ABSPlayerState> Victim;
 
 	/** Ensures the score event is replicated. */

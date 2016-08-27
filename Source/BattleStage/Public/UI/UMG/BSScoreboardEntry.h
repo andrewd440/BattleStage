@@ -41,6 +41,8 @@ private:
 	UFUNCTION()
 	FText GetDeathsText();
 	UFUNCTION()
+	FText GetScoreText();
+	UFUNCTION()
 	FText GetPingText();
 
 protected:
@@ -55,6 +57,9 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* DeathsText;
+
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* ScoreText;
 
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* PingText;

@@ -4,6 +4,7 @@
 #include "BSImpactEffect.h"
 
 #include "Class.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
 
 void UBSImpactEffect::SpawnEffect(UWorld* World, const FHitResult& Hit) const
 {
@@ -12,18 +13,21 @@ void UBSImpactEffect::SpawnEffect(UWorld* World, const FHitResult& Hit) const
 		UE_LOG(BattleStage, Warning, TEXT("UBSImpactEffect::SpawnEffect World parameter is invalid."));
 	}
 	else
-	{
-		const FVector Location = Hit.ImpactPoint;
+	{	
+		const FMaterialEffect& Effect = GetEffect(Hit.PhysMaterial);
 		const FRotator Rotation = Hit.ImpactNormal.Rotation();
 
-		if (ImpactParticles)
+		if (Effect.Particles)
 		{
-			UGameplayStatics::SpawnEmitterAtLocation(World, ImpactParticles, Location, Rotation);
+			// Reflect the particle system on the surface
+			const FVector HitDirection = Hit.ImpactPoint - Hit.TraceStart;
+			const FVector ParticleDirection = HitDirection.MirrorByVector(Hit.ImpactNormal);
+			UGameplayStatics::SpawnEmitterAtLocation(World, Effect.Particles, Hit.ImpactPoint, ParticleDirection.Rotation());
 		}
 
-		if (ImpactSound)
+		if (Effect.Sound)
 		{
-			UGameplayStatics::SpawnSoundAtLocation(World, ImpactSound, Location, Rotation);
+			UGameplayStatics::SpawnSoundAtLocation(World, Effect.Sound, Hit.ImpactPoint, Rotation);
 		}
 
 		if (DecalInfo.Material)
@@ -32,7 +36,7 @@ void UBSImpactEffect::SpawnEffect(UWorld* World, const FHitResult& Hit) const
 
 			// #bstodo Apply random rotation to decal
 			UGameplayStatics::SpawnDecalAttached(DecalInfo.Material, DecalInfo.DecalSize, Hit.Component.Get(), Hit.BoneName,
-				Location, DecalRotation, EAttachLocation::KeepWorldPosition, DecalInfo.LifeSpan);
+				Hit.ImpactPoint, DecalRotation, EAttachLocation::KeepWorldPosition, DecalInfo.LifeSpan);
 		}
 	}
 }
@@ -51,4 +55,17 @@ void UBSImpactEffect::BeginDestroy()
 
 		UE_LOG(BattleStage, Warning, TEXT("UBSImpactEffect should not be instanced. Use DefaultObject instead."));
 	}	
+}
+
+const FMaterialEffect& UBSImpactEffect::GetEffect(TWeakObjectPtr<UPhysicalMaterial> Material) const
+{
+	if (Material.IsValid())
+	{
+		const int32 Index = static_cast<int32>(Material->SurfaceType.GetValue());
+		return SurfaceEffects[Index];
+	}
+	else
+	{
+		return SurfaceEffects[0];
+	}
 }

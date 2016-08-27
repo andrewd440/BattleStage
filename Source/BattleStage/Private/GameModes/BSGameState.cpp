@@ -21,6 +21,7 @@ void ABSGameState::AddScore(ABSPlayerState* Scorer, ABSPlayerState* Victim, cons
 {
 	LastScoreEvent.Type = ScoreType;
 	LastScoreEvent.Scorer = Scorer;
+	LastScoreEvent.ScorerPoints = Score;
 	LastScoreEvent.Victim = Victim;
 
 	LastScoreEvent.ForceReplication();

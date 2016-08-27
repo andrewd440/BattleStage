@@ -28,6 +28,7 @@ void UBSScoreboardEntry::SetPlayerState(const ABSPlayerState* InPlayerState)
 
 		KillsText->TextDelegate.BindDynamic(this, &UBSScoreboardEntry::GetKillsText);
 		DeathsText->TextDelegate.BindDynamic(this, &UBSScoreboardEntry::GetDeathsText);
+		ScoreText->TextDelegate.BindDynamic(this, &UBSScoreboardEntry::GetScoreText);
 		PingText->TextDelegate.BindDynamic(this, &UBSScoreboardEntry::GetPingText);
 	}
 }
@@ -40,6 +41,11 @@ FText UBSScoreboardEntry::GetKillsText()
 FText UBSScoreboardEntry::GetDeathsText()
 {
 	return FText::AsNumber(PlayerState->GetDeathCount());
+}
+
+FText UBSScoreboardEntry::GetScoreText()
+{
+	return FText::AsNumber(PlayerState->Score);
 }
 
 FText UBSScoreboardEntry::GetPingText()

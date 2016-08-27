@@ -145,19 +145,31 @@ public:
 	ABSCharacter* GetCharacter() const;
 
 	/**
-	* Gets the desired rotation of a shot that is fired from this weapon.
+	* Gets the physical rotation of the muzzle of this weapon.
 	*/
 	UFUNCTION(BlueprintNativeEvent, Category = Weapon)
 	FRotator GetFireRotation() const;
 
 	/**
-	* Gets desired start position of a shot that is fired from this weapon.
+	* Gets physical start position of the muzzle of this weapon.
 	*/
 	UFUNCTION(BlueprintNativeEvent, Category = Weapon)
 	FVector GetFireLocation() const;
 
+	/**
+	 * Gets the aim rotation of this weapon. This will be the owning character's 
+	 * aim rotation.
+	 */
 	UFUNCTION(BlueprintCallable, Category = Weapon)
-	FVector GetCameraAimLocation() const;
+	FRotator GetAimRotation() const;
+
+	/**
+	* Gets the aim origin of this weapon. If in first person, this will be the owning 
+	* player's camera view location offset by the muzzle distance for this weapon. Otherwise, 
+	* it will be the physical location of the muzzle.
+	*/
+	UFUNCTION(BlueprintCallable, Category = Weapon)
+	FVector GetAimLocation() const;
 
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	float GetCurrentSpread() const;

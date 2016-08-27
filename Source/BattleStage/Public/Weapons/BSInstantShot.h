@@ -78,7 +78,7 @@ protected:
 	* 
 	* @param ShotData	The shot data from the invoked shot.
 	*/
-	void RespondValidHit(const FShotData& ShotData);
+	void RespondValidatedShot(const FShotData& ShotData);
 	
 	/**
 	* Simulates shot effects to a target location. Only plays visual and audible effects.

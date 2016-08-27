@@ -617,7 +617,7 @@ void ABSWeapon::OnRep_BSCharacter()
 
 FRotator ABSWeapon::GetFireRotation_Implementation() const
 {
-	return BSCharacter->GetBaseAimRotation();
+	return GetActiveMesh()->GetSocketRotation(MuzzleSocket);
 }
 
 FVector ABSWeapon::GetFireLocation_Implementation() const
@@ -625,7 +625,12 @@ FVector ABSWeapon::GetFireLocation_Implementation() const
 	return GetActiveMesh()->GetSocketLocation(MuzzleSocket);
 }
 
-FVector ABSWeapon::GetCameraAimLocation() const
+FRotator ABSWeapon::GetAimRotation() const
+{
+	return BSCharacter->GetBaseAimRotation();
+}
+
+FVector ABSWeapon::GetAimLocation() const
 {
 	FVector AimLocation(ForceInitToZero);
 

@@ -8,19 +8,24 @@ void UBSHUDWidget_Ammo::NativeTick(const FGeometry& MyGeometry, float InDeltaTim
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
 
-	if (BSCharacter.IsValid())
+	if (ABSCharacter* Character = Cast<ABSCharacter>(GetOwningPlayerPawn()))
 	{
-		if (ABSWeapon* Weapon = BSCharacter->GetEquippedWeapon())
+		if (ABSWeapon* Weapon = Character->GetEquippedWeapon())
 		{
-			RemainingClip = Weapon->GetRemainingClip();
-			RemainingAmmo = Weapon->GetRemainingAmmo();
+			const int32 NewRemainingClip = Weapon->GetRemainingClip();			
+			if (NewRemainingClip != RemainingClip)
+			{
+				RemainingClipText->SetText(FText::AsNumber(NewRemainingClip));
+				RemainingClip = NewRemainingClip;
+			}
+			
+			const int32 NewRemainingAmmo = Weapon->GetRemainingAmmo();
+			if (NewRemainingAmmo != RemainingAmmo)
+			{
+				RemainingAmmoText->SetText(FText::AsNumber(NewRemainingAmmo));
+				RemainingAmmo = NewRemainingAmmo;
+			}
+
 		}
 	}
-}
-
-void UBSHUDWidget_Ammo::NativeConstruct()
-{
-	Super::NativeConstruct();
-
-	BSCharacter = Cast<ABSCharacter>(GetOwningPlayerPawn());
 }

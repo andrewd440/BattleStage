@@ -18,7 +18,7 @@ void UBSInstantShot::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty> 
 bool UBSInstantShot::GetShotData(FShotData& OutShotData) const
 {
 	const ABSWeapon* const Weapon = GetWeapon();
-	OutShotData.Start = Weapon->GetCameraAimLocation();
+	OutShotData.Start = Weapon->GetAimLocation();
 
 	// Get a random weapon spread for the shot
 	const int32 RandomSeed = FMath::Rand();
@@ -26,7 +26,7 @@ bool UBSInstantShot::GetShotData(FShotData& OutShotData) const
 	const float BaseSpread = FMath::DegreesToRadians(Weapon->GetCurrentSpread());
 
 	// Use spread to offset shot
-	const FVector TrueAimDirection = Weapon->GetFireRotation().Vector();
+	const FVector TrueAimDirection = Weapon->GetAimRotation().Vector();
 	OutShotData.Direction = SpreadStream.VRandCone(TrueAimDirection, BaseSpread);
 
 	const FVector FireEnd = OutShotData.Start + OutShotData.Direction * MAX_SHOT_RANGE;
@@ -39,9 +39,13 @@ bool UBSInstantShot::GetShotData(FShotData& OutShotData) const
 
 void UBSInstantShot::PreInvokeShot(const FShotData& ShotData)
 {
-	// Play hit locally
-	const FVector Target = (ShotData.bImpactNeeded) ? ShotData.Impact.ImpactPoint : ShotData.Start + ShotData.Direction * MAX_SHOT_RANGE;
-	SimulateFire(Target);
+	// Play hit locally if this is not the server
+	const ABSWeapon* const Weapon = GetWeapon();
+	if (!Weapon->HasAuthority())
+	{
+		const FVector Target = ShotData.Start + ShotData.Direction * MAX_SHOT_RANGE;
+		SimulateFire(Target);
+	}
 }
 
 void UBSInstantShot::InvokeShot(const FShotData& ShotData)
@@ -79,12 +83,11 @@ void UBSInstantShot::PlayImpactEffects(const FHitResult& Hit) const
 	}
 }
 
-void UBSInstantShot::RespondValidHit(const FShotData& ShotData)
+void UBSInstantShot::RespondValidatedShot(const FShotData& ShotData)
 {
 	ABSWeapon* const Weapon = GetWeapon();
-	const FVector End = (ShotData.bImpactNeeded) ? ShotData.Impact.ImpactPoint : ShotData.Start + ShotData.Direction * MAX_SHOT_RANGE;
+	const FVector ShotEnd = (ShotData.bImpactNeeded) ? ShotData.Impact.ImpactPoint : ShotData.Start + ShotData.Direction * MAX_SHOT_RANGE;
 
-	// #bstodo Do damage on server
 	if (Weapon->HasAuthority())
 	{
 		if (ShotData.bImpactNeeded && ShotData.Impact.Actor.IsValid())
@@ -98,14 +101,19 @@ void UBSInstantShot::RespondValidHit(const FShotData& ShotData)
 		}
 
 		// Simulate on remotes
-		ShotRep.Target = End;
+		ShotRep.Target = ShotEnd;
 		ShotRep.FireToggle = !ShotRep.FireToggle;
 	}
 
 	// Play local effects
 	if (Weapon->GetNetMode() != NM_DedicatedServer)
 	{
-		SimulateFire(End);
+		UE_LOG(BattleStage, Warning, TEXT("RespondValidHit"));
+
+		if (ShotData.Impact.bBlockingHit)
+			PlayImpactEffects(ShotData.Impact);
+
+		PlayTrailEffects(ShotData.Start, ShotEnd);
 	}
 }
 
@@ -113,13 +121,19 @@ void UBSInstantShot::SimulateFire(const FVector& Target) const
 {
 	ABSWeapon* const Weapon = GetWeapon();
 
-	const FVector Start = Weapon->GetFireLocation();
-	FHitResult Impact = WeaponTrace(Start, Target);
+	const FVector AimStart = Weapon->GetAimLocation();
+
+	// Trace in target direction to prevent missing the target by small amounts when simulating a 
+	// replicated shot that hit a target.
+	const FVector TraceEnd = AimStart + (Target - AimStart).GetSafeNormal() * MAX_SHOT_RANGE;
+	const FHitResult Impact = WeaponTrace(AimStart, TraceEnd);
+
+	UE_LOG(BattleStage, Warning, TEXT("SimulateFire"));
 
 	if (Impact.bBlockingHit)
 		PlayImpactEffects(Impact);
 
-	PlayTrailEffects(Start, Target);
+	PlayTrailEffects(Weapon->GetFireLocation(), Impact.ImpactPoint);
 }
 
 FHitResult UBSInstantShot::WeaponTrace(const FVector& Start, const FVector& End) const
@@ -127,7 +141,8 @@ FHitResult UBSInstantShot::WeaponTrace(const FVector& Start, const FVector& End)
 	ABSWeapon* const Weapon = GetWeapon();
 
 	FHitResult Impact;
-	const FCollisionQueryParams QueryParams(NAME_None, false, Weapon);
+	FCollisionQueryParams QueryParams(NAME_None, false, Weapon);
+	QueryParams.bReturnPhysicalMaterial = true;
 	GetWorld()->LineTraceSingleByChannel(Impact, Start, End, WEAPON_CHANNEL, QueryParams);
 
 	return Impact;
@@ -142,10 +157,10 @@ void UBSInstantShot::OnRep_ShotRep()
 void UBSInstantShot::ProcessHit(const FShotData& ShotData)
 {
 	// #bstodo Will need to verify a valid hit on the server
-	RespondValidHit(ShotData);
+	RespondValidatedShot(ShotData);
 }
 
 void UBSInstantShot::ProcessMiss(const FShotData& ShotData)
 {
-	RespondValidHit(ShotData);
+	RespondValidatedShot(ShotData);
 }
