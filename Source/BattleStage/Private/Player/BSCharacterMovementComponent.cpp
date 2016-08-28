@@ -9,6 +9,7 @@ UBSCharacterMovementComponent::UBSCharacterMovementComponent(const FObjectInitia
 	: Super(ObjectInitializer)
 {
 	bCanWalkOffLedgesWhenCrouching = true;
+	MaxWalkSpeed = 450.f;
 
 	NavAgentProps.bCanCrouch = true;
 	NavAgentProps.bCanSwim = false;

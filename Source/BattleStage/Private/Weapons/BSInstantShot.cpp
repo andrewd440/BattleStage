@@ -108,8 +108,6 @@ void UBSInstantShot::RespondValidatedShot(const FShotData& ShotData)
 	// Play local effects
 	if (Weapon->GetNetMode() != NM_DedicatedServer)
 	{
-		UE_LOG(BattleStage, Warning, TEXT("RespondValidHit"));
-
 		if (ShotData.Impact.bBlockingHit)
 			PlayImpactEffects(ShotData.Impact);
 
@@ -127,8 +125,6 @@ void UBSInstantShot::SimulateFire(const FVector& Target) const
 	// replicated shot that hit a target.
 	const FVector TraceEnd = AimStart + (Target - AimStart).GetSafeNormal() * MAX_SHOT_RANGE;
 	const FHitResult Impact = WeaponTrace(AimStart, TraceEnd);
-
-	UE_LOG(BattleStage, Warning, TEXT("SimulateFire"));
 
 	if (Impact.bBlockingHit)
 		PlayImpactEffects(Impact);

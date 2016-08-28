@@ -319,8 +319,26 @@ void ABSCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdj
 void ABSCharacter::Jump()
 {
 	SetRunning(false);
-
+	
 	Super::Jump();
+}
+
+void ABSCharacter::OnJumped_Implementation()
+{
+	Super::OnJumped_Implementation();
+	++JumpCounter;
+}
+
+bool ABSCharacter::CanJumpInternal_Implementation() const
+{
+	const bool bCanJump = Super::CanJumpInternal_Implementation();
+	return bCanJump && JumpCounter < MAX_JUMPS;
+}
+
+void ABSCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+	JumpCounter = 0;
 }
 
 bool ABSCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) const

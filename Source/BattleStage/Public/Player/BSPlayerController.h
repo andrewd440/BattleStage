@@ -97,6 +97,7 @@ protected:
 
 	/** Handles jump input */
 	void OnJump();
+	void OnStopJump();
 
 	/**
 	* Called via input to turn at a given rate.

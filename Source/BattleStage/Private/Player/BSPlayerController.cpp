@@ -209,6 +209,7 @@ void ABSPlayerController::SetupInputComponent()
 	InputComponent->BindAxis("MoveRight", this, &ABSPlayerController::OnMoveRight);
 
 	InputComponent->BindAction("Jump", IE_Pressed, this, &ABSPlayerController::OnJump);
+	InputComponent->BindAction("Jump", IE_Released, this, &ABSPlayerController::OnStopJump);
 	InputComponent->BindAction("Sprint", IE_Pressed, this, &ABSPlayerController::OnStartSprint);
 	InputComponent->BindAction("Sprint", IE_Released, this, &ABSPlayerController::OnStopSprint);
 	InputComponent->BindAction("ToggleSprint", IE_Pressed, this, &ABSPlayerController::OnToggleSprint);
@@ -279,6 +280,15 @@ void ABSPlayerController::OnJump()
 	if (Character && !IsMoveInputIgnored())
 	{
 		Character->Jump();
+	}
+}
+
+void ABSPlayerController::OnStopJump()
+{
+	ACharacter* Character = GetCharacter();
+	if (Character && !IsMoveInputIgnored())
+	{
+		Character->StopJumping();
 	}
 }
 

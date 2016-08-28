@@ -50,14 +50,8 @@ UCLASS(config=Game)
 class ABSCharacter : public ACharacter
 {
 	GENERATED_BODY()
-
-	/** First person camera */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UCameraComponent* FirstPersonCamera;
-
-	/** First person mesh */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
-	class USkeletalMeshComponent* FirstPersonMesh;
+private:
+	static const uint32 MAX_JUMPS = 2;
 
 public:
 	ABSCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
@@ -68,7 +62,6 @@ public:
 	float GetAimSpread() const;
 
 	float GetMovementModifier() const;
-
 
 	/**
 	* Enable/Disable actions on the character. (i.e. sprinting, firing weapon, etc.)
@@ -110,39 +103,7 @@ public:
 	bool CanDie() const;
 
 	UFUNCTION(BlueprintCallable, Category = Health)
-	int32 GetHealth() const;
-
-	/** ACharacter Interface Begin */
-	virtual void PostInitializeComponents() override;
-	virtual void PossessedBy(AController* NewController) override;
-	virtual void UnPossessed() override;
-	virtual void Tick(float DeltaSeconds) override;
-	virtual void Jump() override;
-	virtual void Crouch(bool bClientSimulation = false) override;
-	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
-	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
-	virtual void TurnOff() override;
-	/** ACharacter Interface End */
-
-	/** APawn Interface Begin */
-	virtual float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
-	virtual bool ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) const override;
-	virtual void PawnClientRestart() override;
-	/** APawn Interface End */
-
-
-	/** AActor Interface Begin */
-	virtual void PostInitProperties() override;
-	virtual void BeginPlay() override;
-
-	/** 
-	 * Play Animation Montage on the character mesh. Will play on the first person mesh if
-	 * this is a first person character, otherwise it will be played on the third person mesh.
-	 */
-	virtual float PlayAnimMontage(class UAnimMontage* AnimMontage, float InPlayRate = 1.f, FName StartSectionName = NAME_None) override;
-
-	virtual void StopAnimMontage(class UAnimMontage* AnimMontage = NULL) override;	
-	/** AActor Interface End */
+	int32 GetHealth() const;		
 
 protected:
 	/**
@@ -160,7 +121,45 @@ protected:
 	UFUNCTION(BlueprintNativeEvent, Category = Character)
 	void OnReceiveHit();
 
-	void EnableRagdollPhysics();
+	void EnableRagdollPhysics();	
+
+	/** ACharacter Interface Begin */
+public:	
+	virtual void PostInitializeComponents() override;
+	virtual void PossessedBy(AController* NewController) override;
+	virtual void UnPossessed() override;
+	virtual void Tick(float DeltaSeconds) override;
+	virtual void Jump() override;
+	virtual void OnJumped_Implementation() override;
+	virtual void Landed(const FHitResult& Hit) override;
+	virtual void Crouch(bool bClientSimulation = false) override;
+	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+	virtual void TurnOff() override;
+protected:
+	virtual bool CanJumpInternal_Implementation() const override;	
+	/** ACharacter Interface End */
+
+	/** APawn Interface Begin */
+public:	
+	virtual float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+	virtual bool ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) const override;
+	virtual void PawnClientRestart() override;
+	/** APawn Interface End */
+
+	/** AActor Interface Begin */
+public:
+	virtual void PostInitProperties() override;
+	virtual void BeginPlay() override;
+
+	/**
+	* Play Animation Montage on the character mesh. Will play on the first person mesh if
+	* this is a first person character, otherwise it will be played on the third person mesh.
+	*/
+	virtual float PlayAnimMontage(class UAnimMontage* AnimMontage, float InPlayRate = 1.f, FName StartSectionName = NAME_None) override;
+
+	virtual void StopAnimMontage(class UAnimMontage* AnimMontage = NULL) override;
+	/** AActor Interface End */
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Weapon)
@@ -237,9 +236,19 @@ private:
 	void ServerSetRunning(bool bNewRunning);
 
 private:
+	/** First person camera */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UCameraComponent* FirstPersonCamera;
+
+	/** First person mesh */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
+	class USkeletalMeshComponent* FirstPersonMesh;
+
 	float LastEyeHeight;
 
 	bool bIsActionsDisabled = false;
+
+	uint8 JumpCounter = 0;
 
 public:
 	/** Returns FirstPersonCamera subobject **/
