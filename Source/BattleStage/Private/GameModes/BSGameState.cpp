@@ -34,6 +34,23 @@ void ABSGameState::OnRecievedScoreEvent()
 	OnScoreEvent().Broadcast(LastScoreEvent);
 }
 
+void ABSGameState::AddPlayerState(class APlayerState* PlayerState)
+{		
+	Super::AddPlayerState(PlayerState);
+
+	if (!PlayerState->bIsInactive)
+	{
+		OnPlayerJoinLeave().Broadcast(PlayerState, true);
+	}
+}
+
+void ABSGameState::RemovePlayerState(class APlayerState* PlayerState)
+{
+	Super::RemovePlayerState(PlayerState);
+
+	OnPlayerJoinLeave().Broadcast(PlayerState, false);
+}
+
 void ABSGameState::QuitGameAndReturnToMainMenu()
 {
 	if (AuthorityGameMode)

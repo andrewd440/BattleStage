@@ -42,6 +42,7 @@ void UBSScoreboardWidget::NativeConstruct()
 
 	if (ABSGameState* GameState = GetWorld()->GetGameState<ABSGameState>())
 	{
+		OnPlayJoinLeaveHandle = GameState->OnPlayerJoinLeave().AddUObject(this, &UBSScoreboardWidget::OnPlayerJoinLeaveGame);
 		InitializeScoreboard(*GameState);
 	}
 }
@@ -75,9 +76,41 @@ void UBSScoreboardWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaT
 	}
 }
 
+void UBSScoreboardWidget::OnPlayerJoinLeaveGame(APlayerState* PlayerState, bool bIsJoin)
+{
+	if (ABSPlayerState* BSPlayerState = Cast<ABSPlayerState>(PlayerState))
+	{
+		if (bIsJoin)
+		{
+			if (UBSScoreboardEntry* const Entry = CreateWidget<UBSScoreboardEntry>(GetOwningPlayer(), ScoreboardEntryClass))
+			{
+				Entry->SetPlayerState(BSPlayerState);
+				ScoreboardEntries.Add(Entry);
+				ScoreboardEntryPanel->AddChild(Entry);
+			}
+		}
+		else
+		{
+			// Find the entry and remove it
+			const FEntryFindStatePredicate EntryFinder{ BSPlayerState };			
+			if (UBSScoreboardEntry** EntryPtr = ScoreboardEntries.FindByPredicate(EntryFinder))
+			{
+				UBSScoreboardEntry* const Entry = *EntryPtr;
+				ScoreboardEntryPanel->RemoveChild(Entry);
+				ScoreboardEntries.Remove(Entry);
+			}
+		}
+	}
+}
+
 void UBSScoreboardWidget::NativeDestruct()
 {
 	Super::NativeDestruct();
+
+	if (ABSGameState* GameState = GetWorld()->GetGameState<ABSGameState>())
+	{
+		GameState->OnPlayerJoinLeave().Remove(OnPlayJoinLeaveHandle);
+	}
 
 	ScoreboardEntries.Empty();
 	ScoreboardEntryPanel->ClearChildren();	

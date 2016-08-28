@@ -5,6 +5,8 @@
 
 class ABSPlayerState;
 
+// #bstodo Break this out into 2 derived types to handle scoring: TeamGameMode and NonTeamGameMode
+
 UCLASS(minimalapi)
 class ABSGameMode : public AGameMode
 {
@@ -33,6 +35,7 @@ public:
 	 */
 	void HostTerminateGame();
 
+	/** Gets the scoreboard type used for this gamemode */
 	TSubclassOf<class UBSScoreboardWidget> GetScoreboardWidget() const;
 
 protected:

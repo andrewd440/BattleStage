@@ -133,10 +133,9 @@ void ABSWeapon::AttachToOwner()
 	DetachFromOwner();
 
 	const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
-	const FAttachmentTransformRules AttachRules{ EAttachmentRule::SnapToTarget, true };
 
 	USkeletalMeshComponent* const ActiveMesh = GetActiveMesh();
-	ActiveMesh->AttachToComponent(BSCharacter->GetActiveMesh(), AttachRules, AttachSocket);
+	ActiveMesh->AttachToComponent(BSCharacter->GetActiveMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, AttachSocket);
 	ActiveMesh->SetHiddenInGame(false);
 }
 

@@ -8,7 +8,7 @@ FBSOnlineSessionSettings::FBSOnlineSessionSettings(const int32 PublicConnections
 {
 	NumPublicConnections = PublicConnections;
 	bShouldAdvertise = true;
-	bAllowJoinInProgress = true;
+	bAllowJoinInProgress = false;
 	bIsLANMatch = bIsLan;
 	bUsesPresence = true;
 	bAllowJoinViaPresence = true;

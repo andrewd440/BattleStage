@@ -85,9 +85,24 @@ float ABSCharacter::GetMovementModifier() const
 	return Modifier;
 }
 
+void ABSCharacter::SetDisableActions(bool bIsDisabled)
+{
+	bIsActionsDisabled = bIsDisabled;
+
+	if (bIsDisabled)
+	{
+		if (Weapon)
+		{
+			Weapon->StopFire();
+		}
+
+		bIsRunning = false;
+	}
+}
+
 void ABSCharacter::StartFire()
 {
-	if (Weapon)
+	if (Weapon && !bIsActionsDisabled)
 	{
 		if (bIsRunning)
 		{
@@ -113,7 +128,7 @@ bool ABSCharacter::IsRunning() const
 
 bool ABSCharacter::CanRun() const
 {
-	return !GetMovementComponent()->IsFalling();
+	return !GetMovementComponent()->IsFalling() && !bIsActionsDisabled;
 }
 
 void ABSCharacter::SetRunning(bool bNewRunning)
@@ -123,7 +138,7 @@ void ABSCharacter::SetRunning(bool bNewRunning)
 	{
 		bIsRunning = bNewRunning;
 
-		if (bNewRunning)			
+		if (bNewRunning)
 		{
 			// No firing while running
 			if (Weapon)
@@ -159,8 +174,10 @@ void ABSCharacter::ToggleRunning()
 
 void ABSCharacter::ReloadWeapon()
 {
-	if (Weapon)
+	if (!bIsActionsDisabled && Weapon)
+	{
 		Weapon->Reload();
+	}		
 }
 
 const FReceiveHitInfo& ABSCharacter::GetLastHitInfo() const
@@ -235,6 +252,23 @@ void ABSCharacter::StopAnimMontage(class UAnimMontage* AnimMontage /*= NULL*/)
 	{
 		AnimInstance->Montage_Stop(MontageToStop->BlendOut.GetBlendTime(), MontageToStop);
 	}
+}
+
+void ABSCharacter::TurnOff()
+{
+	StopFire();
+
+	if (GetNetMode() != NM_DedicatedServer && FirstPersonMesh != NULL)
+	{
+		FirstPersonMesh->bPauseAnims = true;
+		if (FirstPersonMesh->IsSimulatingPhysics())
+		{
+			FirstPersonMesh->bBlendPhysics = true;
+			FirstPersonMesh->KinematicBonesUpdateType = EKinematicBonesUpdateToPhysics::SkipAllBones;
+		}
+	}
+
+	Super::TurnOff();
 }
 
 void ABSCharacter::PostInitializeComponents()
@@ -510,7 +544,16 @@ void ABSCharacter::PossessedBy(AController* NewController)
 	SetOwner(NewController);
 
 	if (Weapon)
+	{
 		Weapon->AttachToOwner();
+	}
+
+	UpdateMeshVisibility();
+}
+
+void ABSCharacter::UnPossessed()
+{
+	Super::UnPossessed();
 
 	UpdateMeshVisibility();
 }

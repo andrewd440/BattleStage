@@ -79,10 +79,6 @@ public:
 	DECLARE_EVENT_TwoParams(ABSGameSession, FOnJoinSessionEvent, FName /*SessionName*/, EOnJoinSessionCompleteResult::Type /*Result*/);
 	FOnJoinSessionEvent& OnJoinSessionComplete() { return OnJoinedSessionEvent; }
 
-	/** AGameSession Interface Begin */
-	virtual void ReturnToMainMenuHost() override;
-	/** AGameSession Interface End */
-
 private:	
 	/**
 	* Delegate fired when a session create request has completed
@@ -100,6 +96,10 @@ private:
 	void OnFindSessionsComplete(bool bWasSuccessful);
 
 	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);	
+
+	/** AGameSession Interface Begin */
+	virtual FString ApproveLogin(const FString& Options) override;
+	/** AGameSession Interface End */
 
 protected:
 	// The current sessions search settings
@@ -119,5 +119,5 @@ private:
 	// Handles for network delegates
 	FDelegateHandle OnCreateSessionCompleteHandle;	
 	FDelegateHandle OnFindSessionsCompleteHandle;
-	FDelegateHandle OnJoinSessionCompleteHandle;
+	FDelegateHandle OnJoinSessionCompleteHandle;	
 };

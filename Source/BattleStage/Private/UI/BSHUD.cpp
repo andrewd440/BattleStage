@@ -60,6 +60,16 @@ void ABSHUD::ShowGameScoreboard(const bool bShowScoreboard)
 	}
 }
 
+void ABSHUD::ShowPostMatchUI(const bool bIsWinner, const int32 CountdownToMainMenu)
+{
+	bIsGameEnded = true;
+
+	GameEndedInfo.bIsWinner = bIsWinner;
+	GameEndedInfo.ReturnToMainMenuTime = GetWorld()->GetTimeSeconds() + CountdownToMainMenu;
+
+	ShowGameScoreboard(true);
+}
+
 void ABSHUD::BeginPlay()
 {
 	Super::BeginPlay();
@@ -88,7 +98,7 @@ void ABSHUD::OnScoreEventReceived(const FScoreEvent& ScoreEvent)
 
 	if (EventFeed.Num() >= MaxEventCount)
 	{
-		EventFeed.RemoveAt(1, 1, false);
+		EventFeed.RemoveAt(0, 1, false);
 	}
 
 	// Construct event feed item
@@ -152,13 +162,21 @@ void ABSHUD::DrawHUD()
 
 	UIScale = Canvas->ClipY / 1080.f;
 
-	if (ABSCharacter* Character = Cast<ABSCharacter>(GetOwningPawn()))
+	if (!bIsGameEnded)
 	{
-		DrawCrosshair(*Character);
-		DrawLowHealthOverlay(*Character);
+		if (ABSCharacter* Character = Cast<ABSCharacter>(GetOwningPawn()))
+		{
+			DrawCrosshair(*Character);
+			DrawLowHealthOverlay(*Character);
+		}
+
+		DrawDamageIndicator();
+	}
+	else
+	{
+		DrawPostMatchUI();
 	}
 
-	DrawDamageIndicator();
 	DrawEventFeed();
 	DrawPersonalEventMessage();
 }
@@ -374,6 +392,49 @@ void ABSHUD::DrawPersonalEventMessage()
 
 		Canvas->DrawItem(TextItem);		
 	}
+}
+
+void ABSHUD::DrawPostMatchUI()
+{
+	const FText MatchWonText = LOCTEXT("Match Won", "Match Won");
+	const FText MatchLossText = LOCTEXT("Match Loss", "Match Loss");	
+
+	const int32 RemainingTime = static_cast<int32>(FMath::Max(0.f, GameEndedInfo.ReturnToMainMenuTime - GetWorld()->GetTimeSeconds()));
+
+	const FString ReturnToMainMenuString = FString::Printf(TEXT("Returning to main menu... %d"), RemainingTime);
+	const FText ReturnToMainMenuText = FText::FromString(ReturnToMainMenuString);
+
+	Canvas->SetDrawColor(FColor::White);
+
+	FCanvasTextItem TextItem{ FVector2D::ZeroVector, FText::GetEmpty(), LargeFont, FLinearColor::White };
+	TextItem.Scale = FVector2D{ UIScale, UIScale };
+	TextItem.EnableShadow(FLinearColor::Black);
+
+	float CenterX, CenterY;
+	Canvas->GetCenter(CenterX, CenterY);
+
+	FVector2D TextSize;
+
+	// Draw match result text
+	const FText& MatchResultText = (GameEndedInfo.bIsWinner) ? MatchWonText : MatchLossText;
+	TextItem.Text = MatchResultText;
+	Canvas->StrLen(LargeFont, MatchResultText.ToString(), TextSize.X, TextSize.Y);
+	const FVector2D MatchResultPosition{ CenterX, 200.f * UIScale };
+	const FVector2D MatchResultOffset{ TextSize.X / 2.f, TextSize.Y / 2.f };
+
+	TextItem.Position = MatchResultPosition - MatchResultOffset * TextItem.Scale;
+
+	Canvas->DrawItem(TextItem);
+
+	// Draw Returning to main menu text
+	Canvas->StrLen(LargeFont, ReturnToMainMenuString, TextSize.X, TextSize.Y);
+	TextItem.Text = ReturnToMainMenuText;
+	const FVector2D ReturnMenuPosition{ CenterX, Canvas->ClipY - 200.f * UIScale };
+	const FVector2D ReturnMenuOffset{ TextSize.X / 2.f, TextSize.Y / 2.f };
+
+	TextItem.Position = ReturnMenuPosition - ReturnMenuOffset * TextItem.Scale;
+
+	Canvas->DrawItem(TextItem);
 }
 
 #undef LOCTEXT_NAMESPACE

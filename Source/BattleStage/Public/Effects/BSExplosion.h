@@ -8,7 +8,7 @@
 #include "BSExplosion.generated.h"
 
 /**
- * 
+ * Uses to spawn explosion effects in the environment.
  */
 UCLASS(Abstract)
 class BATTLESTAGE_API ABSExplosion : public AActor

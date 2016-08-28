@@ -31,6 +31,10 @@ protected:
 	/** UUserWidget Interface End */
 	
 protected:
+	/** Called when a player state is joining or leaving the game. */
+	virtual void OnPlayerJoinLeaveGame(APlayerState* PlayerState, bool bIsJoin);
+
+protected:
 	/** Container for all scoreboard entries */
 	UPROPERTY(meta = (BindWidget))
 	class UPanelWidget* ScoreboardEntryPanel;
@@ -41,4 +45,6 @@ protected:
 private:
 	/** Local list of all current scoreboard entries */
 	TArray<UBSScoreboardEntry*> ScoreboardEntries;
+
+	FDelegateHandle OnPlayJoinLeaveHandle;
 };

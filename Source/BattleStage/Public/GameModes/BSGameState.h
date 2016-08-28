@@ -56,6 +56,10 @@ public:
 	DECLARE_EVENT_OneParam(ABSGameState, FOnScoreEvent, const FScoreEvent&);
 	FOnScoreEvent& OnScoreEvent() { return OnScoreEventReceived; }
 
+	/** Broadcasted when a player joins or leaves the game */
+	DECLARE_EVENT_TwoParams(ABSGameState, FOnPlayerJoinLeaveEvent, APlayerState* /*PlayerState*/, bool /*bIsJoin*/);
+	FOnPlayerJoinLeaveEvent& OnPlayerJoinLeave() { return OnPlayerJoinLeaveEvent; }
+
 public:
 	/** Get the time remaining it this match */
 	UFUNCTION(BlueprintCallable, Category = GameState)
@@ -76,6 +80,11 @@ public:
 	* disconnected from the game and returned to the main menu. 
 	*/
 	void QuitGameAndReturnToMainMenu();
+
+	/** AGameState Interface Begin */
+	virtual void AddPlayerState(class APlayerState* PlayerState) override;
+	virtual void RemovePlayerState(class APlayerState* PlayerState) override;
+	/** AGameState Interface End */
 
 	/** AActor Interface Begin */
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -120,4 +129,6 @@ protected:
 
 	/** Event broadcasted when a score event is received */
 	FOnScoreEvent OnScoreEventReceived;
+
+	FOnPlayerJoinLeaveEvent OnPlayerJoinLeaveEvent;
 };

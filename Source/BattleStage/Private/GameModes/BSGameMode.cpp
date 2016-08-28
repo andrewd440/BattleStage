@@ -160,7 +160,13 @@ void ABSGameMode::HandleMatchHasEnded()
 {
 	Super::HandleMatchHasEnded();
 
-	ReturnToMainMenuHost();
+	// #bstodo If no winning player, set highest scoring player
+
+	for (FConstControllerIterator ItrController = GetWorld()->GetControllerIterator(); ItrController; ++ItrController)
+	{
+		AController* const Controller = *ItrController;
+		Controller->GameHasEnded(nullptr, Controller->PlayerState == WinningPlayer);
+	}
 }
 
 bool ABSGameMode::ReadyToEndMatch_Implementation()

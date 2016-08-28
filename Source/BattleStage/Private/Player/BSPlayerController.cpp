@@ -11,6 +11,9 @@
 #include "BSUserWidget.h"
 #include "BSGameInstance.h"
 #include "BSGameState.h"
+#include "EngineUtils.h"
+
+#define LOCTEXT_NAMESPACE "BattleStage.PlayerController"
 
 ABSPlayerController::ABSPlayerController()
 	: Super()
@@ -142,6 +145,32 @@ void ABSPlayerController::SetPlayer(UPlayer* InPlayer)
 	SetInputMode(InputMode);
 }
 
+void ABSPlayerController::ClientGameEnded_Implementation(class AActor* EndGameFocus, bool bIsWinner)
+{		
+	if (EndGameFocus == nullptr)
+	{
+		EndGameFocus = GetPawn();
+	}
+
+	Super::ClientGameEnded_Implementation(EndGameFocus, bIsWinner);	
+	
+	if (BSCharacter)
+	{
+		BSCharacter->SetDisableActions(true);
+	}
+	
+	SetCinematicMode(true, true, true);		
+
+	const float ReturnToMenuTime = 15.f;
+	FTimerHandle TimerHandle;
+	GetWorldTimerManager().SetTimer(TimerHandle, this, &ABSPlayerController::HandleReturnToMainMenu, ReturnToMenuTime);
+
+	if (ABSHUD* HUD = Cast<ABSHUD>(GetHUD()))
+	{
+		HUD->ShowPostMatchUI(bIsWinner, ReturnToMenuTime);
+	}
+}
+
 void ABSPlayerController::ClientNotifyReceivedDamage_Implementation(const FVector& SourcePosition)
 {
 	if (ABSHUD* HUD = Cast<ABSHUD>(GetHUD()))
@@ -215,6 +244,14 @@ void ABSPlayerController::ClientHearSound_Implementation(USoundBase* Sound, AAct
 		{
 			UGameplayStatics::PlaySoundAtLocation(GetWorld(), Sound, SoundLocation);
 		}
+	}
+}
+
+void ABSPlayerController::TurnOffAllPawns()
+{
+	for (TActorIterator<APawn> ItrPawn(GetWorld()); ItrPawn; ++ItrPawn)
+	{
+		(*ItrPawn)->TurnOff();
 	}
 }
 
@@ -319,3 +356,5 @@ void ABSPlayerController::OnCrouch()
 		}
 	}
 }
+
+#undef LOCTEXT_NAMESPACE

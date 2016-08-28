@@ -86,6 +86,8 @@ protected:
 	UFUNCTION(Client, Unreliable)
 	void ClientNotifyReceivedDamage(const FVector& SourcePosition);
 
+	void TurnOffAllPawns();
+
 protected:
 	/** Handles moving forward/backward */
 	void OnMoveForward(float Val);
@@ -120,6 +122,8 @@ protected:
 public:
 	virtual void SetPawn(APawn* InPawn) override;
 	virtual void SetPlayer(UPlayer* InPlayer) override;
+	virtual void ClientGameEnded_Implementation(class AActor* EndGameFocus, bool bIsWinner) override;
+
 protected:
 	virtual void SetupInputComponent() override;
 	/** APlayerController Interface End */

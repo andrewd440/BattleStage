@@ -69,6 +69,12 @@ public:
 
 	float GetMovementModifier() const;
 
+
+	/**
+	* Enable/Disable actions on the character. (i.e. sprinting, firing weapon, etc.)
+	*/
+	virtual void SetDisableActions(bool bIsDisabled);
+
 	virtual void StartFire();
 	virtual void StopFire();
 
@@ -109,11 +115,13 @@ public:
 	/** ACharacter Interface Begin */
 	virtual void PostInitializeComponents() override;
 	virtual void PossessedBy(AController* NewController) override;
+	virtual void UnPossessed() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void Jump() override;
 	virtual void Crouch(bool bClientSimulation = false) override;
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+	virtual void TurnOff() override;
 	/** ACharacter Interface End */
 
 	/** APawn Interface Begin */
@@ -133,7 +141,7 @@ public:
 	 */
 	virtual float PlayAnimMontage(class UAnimMontage* AnimMontage, float InPlayRate = 1.f, FName StartSectionName = NAME_None) override;
 
-	virtual void StopAnimMontage(class UAnimMontage* AnimMontage = NULL) override;
+	virtual void StopAnimMontage(class UAnimMontage* AnimMontage = NULL) override;	
 	/** AActor Interface End */
 
 protected:
@@ -230,6 +238,8 @@ private:
 
 private:
 	float LastEyeHeight;
+
+	bool bIsActionsDisabled = false;
 
 public:
 	/** Returns FirstPersonCamera subobject **/

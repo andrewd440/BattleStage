@@ -31,6 +31,13 @@ void UBSScoreboardEntry::SetPlayerState(const ABSPlayerState* InPlayerState)
 		ScoreText->TextDelegate.BindDynamic(this, &UBSScoreboardEntry::GetScoreText);
 		PingText->TextDelegate.BindDynamic(this, &UBSScoreboardEntry::GetPingText);
 	}
+	else
+	{
+		KillsText->TextDelegate.Clear();
+		DeathsText->TextDelegate.Clear();
+		ScoreText->TextDelegate.Clear();
+		PingText->TextDelegate.Clear();
+	}
 }
 
 FText UBSScoreboardEntry::GetKillsText()

@@ -149,7 +149,22 @@ void ABSGameSession::OnJoinSessionComplete(FName SessionName, EOnJoinSessionComp
 	OnJoinSessionComplete().Broadcast(SessionName, Result);
 }
 
-void ABSGameSession::ReturnToMainMenuHost()
+FString ABSGameSession::ApproveLogin(const FString& Options)
 {
-	Super::ReturnToMainMenuHost();
+	FString Result = Super::ApproveLogin(Options);
+
+	if (Result.IsEmpty())
+	{
+		IOnlineSessionPtr SessionInt = Online::GetSessionInterface(GetWorld());
+		if (SessionInt.IsValid() && SessionInt->GetSessionState(GameSessionName) == EOnlineSessionState::InProgress)
+		{
+			FOnlineSessionSettings* SessionSettings = SessionInt->GetSessionSettings(GameSessionName);
+			if (!SessionSettings->bAllowJoinInProgress)
+			{
+				Result = TEXT("Cannot join game in progress.");
+			}
+		}
+	}
+
+	return Result;
 }
