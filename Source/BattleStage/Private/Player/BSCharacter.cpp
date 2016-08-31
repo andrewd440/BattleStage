@@ -216,10 +216,10 @@ void ABSCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (HasAuthority())
+	if (IsLocallyControlled())
 	{
 		EquipWeapon();
-	}
+	}		
 }
 
 float ABSCharacter::PlayAnimMontage(class UAnimMontage* AnimMontage, float InPlayRate /*= 1.f*/, FName StartSectionName /*= NAME_None*/)
@@ -274,6 +274,11 @@ void ABSCharacter::TurnOff()
 void ABSCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
+
+	if (HasAuthority())
+	{
+		CreateDefaultLoadout();
+	}
 
 	UpdateMeshVisibility();
 }
@@ -406,6 +411,16 @@ void ABSCharacter::OnRep_IsDying()
 	OnDeath();
 }
 
+void ABSCharacter::OnRep_Weapon()
+{
+	if (Weapon)
+	{
+		// Can't guarantee that the owner gets replicated with the weapon, so set it here.
+		// (At least as far as I know)
+		Weapon->SetOwner(this);
+	}
+}
+
 void ABSCharacter::UpdateViewTarget(const float DeltaSeconds)
 {
 	if (FMath::Abs(LastEyeHeight - BaseEyeHeight) > 0.01f)
@@ -477,6 +492,17 @@ void ABSCharacter::SetReceiveHitInfo(const float Damage, const FDamageEvent& Dam
 	ReceiveHitInfo.Damage = ReceiveHitInfo.Damage;
 
 	ReceiveHitInfo.ForceReplication();
+}
+
+void ABSCharacter::CreateDefaultLoadout()
+{
+	if (DefaultWeaponClass)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Instigator = this;
+		SpawnParams.Owner = this;
+		Weapon = GetWorld()->SpawnActor<ABSWeapon>(DefaultWeaponClass, SpawnParams);
+	}
 }
 
 void ABSCharacter::OnReceiveHit_Implementation()
@@ -578,29 +604,18 @@ void ABSCharacter::UnPossessed()
 
 void ABSCharacter::EquipWeapon()
 {
-	if (DefaultWeaponClass)
+	if (Weapon)
 	{
-		if (!HasAuthority())
-		{
-			ServerEquipWeapon();
-		}
-		else
-		{
-			FActorSpawnParameters SpawnParams;
-			SpawnParams.Instigator = this;
-			SpawnParams.Owner = this;
-			Weapon = GetWorld()->SpawnActor<ABSWeapon>(DefaultWeaponClass, SpawnParams);			
-			Weapon->ServerEquip(this);
-		}
+		Weapon->Equip();
 	}
 }
 
-void ABSCharacter::ServerEquipWeapon_Implementation()
-{
-	EquipWeapon();
-}
-
-bool ABSCharacter::ServerEquipWeapon_Validate()
-{
-	return true;
-}
+//void ABSCharacter::ServerEquipWeapon_Implementation()
+//{
+//	EquipWeapon();
+//}
+//
+//bool ABSCharacter::ServerEquipWeapon_Validate()
+//{
+//	return true;
+//}

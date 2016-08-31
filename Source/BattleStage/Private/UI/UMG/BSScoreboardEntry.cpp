@@ -57,5 +57,5 @@ FText UBSScoreboardEntry::GetScoreText()
 
 FText UBSScoreboardEntry::GetPingText()
 {
-	return FText::AsNumber(PlayerState->Ping);
+	return FText::AsNumber(PlayerState->Ping * 4); // PlayerState::Ping is ping/ms / 4
 }

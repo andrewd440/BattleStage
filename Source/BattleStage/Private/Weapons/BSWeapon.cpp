@@ -28,7 +28,6 @@ ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 	MeshFP->bDisableClothSimulation = true;
 	MeshFP->bReceivesDecals = false;
 	MeshFP->bOnlyOwnerSee = true;
-	MeshFP->bRenderCustomDepth = true;
 	RootComponent = MeshFP;
 
 	// Third person weapon mesh
@@ -38,7 +37,6 @@ ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 	MeshTP->bReceivesDecals = false;
 	MeshTP->bDisableClothSimulation = true;
 	MeshTP->bOwnerNoSee = true;
-	MeshTP->SetupAttachment(RootComponent);
 
 	// Default weapon fire data
 	WeaponStats.MaxAmmo = 120;
@@ -86,16 +84,21 @@ void ABSWeapon::PostInitializeComponents()
 	}
 }
 
+void ABSWeapon::SetOwner(AActor* NewOwner)
+{
+	Super::SetOwner(NewOwner);
+
+	BSCharacter = Cast<ABSCharacter>(NewOwner);
+	AttachToOwner();
+}
+
 void ABSWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME_CONDITION(ABSWeapon, bServerFired, COND_SkipOwner);
-	DOREPLIFETIME(ABSWeapon, BSCharacter);
-	DOREPLIFETIME(ABSWeapon, WeaponState); // Remotes need to play animations, etc.
-	DOREPLIFETIME_CONDITION(ABSWeapon, RemainingAmmo, COND_OwnerOnly);
-	DOREPLIFETIME_CONDITION(ABSWeapon, RemainingClip, COND_OwnerOnly);
-	DOREPLIFETIME(ABSWeapon, ShotType);
+	DOREPLIFETIME_CONDITION(ABSWeapon, WeaponState, COND_SkipOwner);
+	DOREPLIFETIME_CONDITION(ABSWeapon, ShotType, COND_InitialOnly);
 }
 
 // Called when the game starts or when spawned
@@ -132,11 +135,14 @@ void ABSWeapon::AttachToOwner()
 	// Rid of current attachments
 	DetachFromOwner();
 
-	const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
+	if (BSCharacter)
+	{
+		const FName AttachSocket = BSCharacter->GetWeaponEquippedSocket();
 
-	USkeletalMeshComponent* const ActiveMesh = GetActiveMesh();
-	ActiveMesh->AttachToComponent(BSCharacter->GetActiveMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, AttachSocket);
-	ActiveMesh->SetHiddenInGame(false);
+		USkeletalMeshComponent* const ActiveMesh = GetActiveMesh();
+		ActiveMesh->AttachToComponent(BSCharacter->GetActiveMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, AttachSocket);
+		ActiveMesh->SetHiddenInGame(false);
+	}
 }
 
 void ABSWeapon::DetachFromOwner()
@@ -148,18 +154,11 @@ void ABSWeapon::DetachFromOwner()
 	MeshTP->SetHiddenInGame(true);
 }
 
-void ABSWeapon::ServerEquip_Implementation(ABSCharacter* Character)
+void ABSWeapon::Equip()
 {
-	BSCharacter = Character;
-
 	AttachToOwner();
 
 	SetWeaponState(EWeaponState::Equipping);
-}
-
-bool ABSWeapon::ServerEquip_Validate(ABSCharacter* Character)
-{
-	return true;
 }
 
 void ABSWeapon::Unequip()
@@ -235,27 +234,27 @@ void ABSWeapon::PlayFiringSequence()
 	}
 }
 
-void ABSWeapon::SetWeaponState(EWeaponState State)
+void ABSWeapon::SetWeaponState(EWeaponState NewState)
 {
-	if (WeaponState != State)
+	if (WeaponState != NewState)
 	{
-		switch (State)
+		switch (NewState)
 		{
 		case EWeaponState::Firing:
 			if (!CanFire())
 			{
 				if (CanReload())
-					State = EWeaponState::Reloading;
+					NewState = EWeaponState::Reloading;
 				else
 				{
-					State = EWeaponState::Active;
+					NewState = EWeaponState::Active;
 					PlayEmptyClipSequence();
 				}
 			}
 			break;
 		case EWeaponState::Reloading:
 			if (!CanReload())
-				State = EWeaponState::Active;
+				NewState = EWeaponState::Active;
 			break;
 		case EWeaponState::Inactive:
 			if(WeaponState != EWeaponState::Unequipping)
@@ -268,107 +267,153 @@ void ABSWeapon::SetWeaponState(EWeaponState State)
 		}
 
 		// Make sure the weapon state is really changing
-		if(WeaponState != State)
-			HandleNewWeaponState(State);
-	}
-}
-
-void ABSWeapon::HandleNewWeaponState(const EWeaponState State)
-{
-	if (!HasAuthority())
-	{
-		ServerHandleNewWeaponState(State);
-	}
-	else
-	{
-		WeaponState = State;
-
-		FTimerManager& TimerManager = GetWorldTimerManager();
-		TimerManager.ClearTimer(WeaponStateTimer);
-
-		switch(State)
+		if (WeaponState != NewState)
 		{
-		case EWeaponState::Equipping:
+			// Set state locally
+			WeaponState = NewState;
+			OnNewWeaponState();
+
+			if (!HasAuthority())
 			{
-				const float SequenceLength = PlayEquipSequence();
-				if (SequenceLength > 0)
-				{
-					TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnEquipSequenceFinished, SequenceLength);
-				}
-				else if (SequenceLength == 0)
-				{
-					OnEquipSequenceFinished();
-				}
-				break;
-			}
-		case EWeaponState::Unequipping:
-			{
-				const float SequenceLength = PlayUnequipSequence();
-				if (SequenceLength > 0)
-				{
-					TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnUnquipSequenceFinished, SequenceLength);
-				}
-				else if (SequenceLength == 0)
-				{
-					OnUnquipSequenceFinished();
-				}
-				break;
-			}
-		case EWeaponState::Reloading:			
-			{
-				const float SequenceLength = PlayReloadSequence();
-				if (SequenceLength > 0)
-				{
-					TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnReloadSequenceFinished, SequenceLength);
-				}
-				else if (SequenceLength == 0)
-				{
-					OnReloadSequenceFinished();
-				}
-				break;
-			}
-		}
-		
-		if (GetNetMode() != NM_DedicatedServer)
-			OnRep_WeaponState();
+				// Make sure the transition is sent to the server
+				ServerSetWeaponState(NewState);
+			}			
+		}			
 	}
 }
 
-void ABSWeapon::ServerHandleNewWeaponState_Implementation(const EWeaponState State)
+void ABSWeapon::ServerSetWeaponState_Implementation(const EWeaponState NewState)
 {
-	HandleNewWeaponState(State);
+	WeaponState = NewState;
+
+	OnNewWeaponState();
 }
 
-bool ABSWeapon::ServerHandleNewWeaponState_Validate(const EWeaponState State)
+bool ABSWeapon::ServerSetWeaponState_Validate(const EWeaponState State)
 {
 	return true;
 }
 
-void ABSWeapon::OnEquipSequenceFinished()
+void ABSWeapon::OnNewWeaponState()
+{
+	if (PrevWeaponState == EWeaponState::Firing)
+		OnExitFiringState();
+
+	switch (WeaponState)
+	{
+	case EWeaponState::Inactive:
+		OnEnteredInactiveState();
+		break;
+	case EWeaponState::Equipping:
+		OnEquipTransitionStart();
+		break;
+	case EWeaponState::Active:
+		OnEnteredActiveState();
+		break;
+	case EWeaponState::Unequipping:
+		OnUnequipTransitionStart();
+		break;
+	case EWeaponState::Firing:
+		OnEnteredFiringState();
+		break;
+	case EWeaponState::Reloading:
+		OnReloadTransitionStart();
+		break;
+	default:
+		break;
+	}
+
+	PrevWeaponState = WeaponState;
+}
+
+void ABSWeapon::OnEquipTransitionStart()
+{
+	OnEnteredEquippingState();
+
+	float TransitionTime = 0.f;
+	if (UAnimMontage* const Montage = GetWeaponMontage(EquipAnim))
+	{
+		TransitionTime = Montage->GetPlayLength();
+	}
+
+	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+	TimerManager.ClearTimer(WeaponStateTimer);
+	
+	if (TransitionTime >= 0.f)
+	{
+		TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnEquipTransitionExit, TransitionTime);
+	}
+	else
+	{
+		OnEquipTransitionExit();
+	}
+}
+
+void ABSWeapon::OnEquipTransitionExit()
 {
 	SetWeaponState(EWeaponState::Active);
 }
 
-void ABSWeapon::OnReloadSequenceFinished()
+void ABSWeapon::OnReloadTransitionStart()
 {
+	OnEnteredReloadingState();
+
+	float TransitionTime = 0.f;
+	if (UAnimMontage* const Montage = GetWeaponMontage(ReloadAnim))
+	{
+		TransitionTime = Montage->GetPlayLength();
+	}
+
+	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+	TimerManager.ClearTimer(WeaponStateTimer);
+	
+	if (TransitionTime >= 0.f)
+	{
+		TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnReloadTransitionExit, TransitionTime);
+	}
+	else
+	{
+		OnReloadTransitionExit();
+	}
+}
+
+void ABSWeapon::OnReloadTransitionExit()
+{
+	// Update clip and ammo
 	const int32 EmptySlots = WeaponStats.ClipSize - RemainingClip;
 	const int32 RefillCount = FMath::Min(RemainingAmmo, EmptySlots);
 	RemainingClip += RefillCount;
 	RemainingAmmo -= RefillCount;
+
 	SetWeaponState(EWeaponState::Active);
 }
 
-void ABSWeapon::OnUnquipSequenceFinished()
+void ABSWeapon::OnUnequipTransitionStart()
 {
-	SetWeaponState(EWeaponState::Inactive);
-	DetachRootComponentFromParent();
+	OnEnteredUnequippingState();
 
-	BSCharacter = nullptr;
+	float TransitionTime = 0.f;
+	if (UAnimMontage* const Montage = GetWeaponMontage(UnequipAnim))
+	{
+		TransitionTime = Montage->GetPlayLength();
+	}
+
+	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+	TimerManager.ClearTimer(WeaponStateTimer);
+
+	if (TransitionTime >= 0.f)
+	{
+		TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnUnequipTransitionExit, TransitionTime);
+	}
+	else
+	{
+		OnUnequipTransitionExit();
+	}	
 }
 
-void ABSWeapon::OnEmptyClipSequenceFinished()
+void ABSWeapon::OnUnequipTransitionExit()
 {
-
+	SetWeaponState(EWeaponState::Inactive);
 }
 
 void ABSWeapon::FireShot()
@@ -386,7 +431,7 @@ void ABSWeapon::FireShot()
 			{
 				ShotType->PreInvokeShot(ShotData);
 
-				InvokeShot(ShotData);
+				InvokeShot(ShotData);				
 
 				LastFireTime = GetWorld()->GetTimeSeconds();
 			}
@@ -409,6 +454,7 @@ void ABSWeapon::InvokeShot(const FShotData& ShotData)
 	{
 		ServerInvokeShot(ShotData);
 		OnShotFired();
+		--RemainingClip;
 	}
 	else
 	{
@@ -417,21 +463,12 @@ void ABSWeapon::InvokeShot(const FShotData& ShotData)
 		{
 			ShotType->InvokeShot(ShotData);
 
-			RemainingClip--;
+			--RemainingClip;
 
 			bServerFired = !bServerFired;
 
 			if (GetNetMode() != NM_DedicatedServer)
 				OnRep_ServerFired();
-		}
-		else if (CanReload())
-		{
-			SetWeaponState(EWeaponState::Reloading);
-		}
-		else
-		{
-			SetWeaponState(EWeaponState::Active);
-			PlayEmptyClipSequence();
 		}
 	}
 }
@@ -524,6 +561,14 @@ void ABSWeapon::OnEnteredInactiveState()
 	// Do nothing... for now
 }
 
+void ABSWeapon::OnRep_Owner()
+{
+	Super::OnRep_Owner();
+
+	BSCharacter = Cast<ABSCharacter>(GetOwner());
+	AttachToOwner();
+}
+
 void ABSWeapon::ServerInvokeShot_Implementation(const FShotData& ShotData)
 {
 	InvokeShot(ShotData);
@@ -607,11 +652,6 @@ void ABSWeapon::OnRep_WeaponState()
 	}
 
 	PrevWeaponState = WeaponState;
-}
-
-void ABSWeapon::OnRep_BSCharacter()
-{
-	AttachToOwner();
 }
 
 FRotator ABSWeapon::GetFireRotation_Implementation() const

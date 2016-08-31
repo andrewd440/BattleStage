@@ -17,11 +17,11 @@ UENUM()
 enum class EWeaponState
 {
 	Inactive,		// Is not equipped
+	Equipping,		// In equipping transition
 	Active,			// Is equipped
-	Equipping,		// In equipping sequence
-	Unequipping,	// In unequipping sequence
 	Firing,			// Trigger is held
-	Reloading		// In reloading sequence
+	Reloading,		// In reloading transition
+	Unequipping,	// In unequipping transition
 };
 
 USTRUCT()
@@ -116,8 +116,8 @@ public:
 
 	void DetachFromOwner();
 
-	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable, Category = Weapon)
-	virtual void ServerEquip(ABSCharacter* Character);
+	UFUNCTION(BlueprintCallable, Category = Weapon)
+	virtual void Equip();
 
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	virtual void Unequip();
@@ -178,6 +178,7 @@ public:
 	virtual void PostInitProperties() override;
 	virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
 	virtual void PostInitializeComponents() override;
+	virtual void SetOwner(AActor* NewOwner) override;
 	/** AActor interface end */
 
 protected:
@@ -228,7 +229,7 @@ protected:
 	/**
 	* Called when the weapon state has been transition into the Inactive state.
 	*/
-	virtual void OnEnteredInactiveState();
+	virtual void OnEnteredInactiveState();	
 
 protected:
 	// Owning client only.
@@ -277,7 +278,7 @@ protected:
 	virtual void PlayEmptyClipSequence();
 
 	//-----------------------------------------------------------------
-	// Weapon state transitions (Server Only)
+	// Weapon state transitions (Controlling Client Only)
 	//-----------------------------------------------------------------
 
 	/**
@@ -290,35 +291,60 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	virtual void SetWeaponState(EWeaponState State);
 
-	virtual void HandleNewWeaponState(const EWeaponState State);
-
 	UFUNCTION(Server, Reliable, WithValidation)
-	virtual void ServerHandleNewWeaponState(const EWeaponState State);
+	virtual void ServerSetWeaponState(const EWeaponState State);
 
 	/**
-	* Server only. Called when the equip sequence has finished and
-	* should be transitioned to the Active state.
-	*/
-	virtual void OnEquipSequenceFinished();
+	 * Controlling Client Only.
+	 * Handles a new weapon state on the controlling client.
+	 * For transition states, the transition to the next state will be started.
+	 */
+	void OnNewWeaponState();
 
 	/**
-	* Server only. Called when the reload sequence has finished and
-	* should be  transitioned to the next state, Active by default.
-	* Reload data changes such as adding ammo to the clip should be done here.
+	* Controlling Client Only.
+	* Called when the Equipping state has been entered and should begin transitioning
+	* to the Active state. Responsible for calling OnEquipTransitionExit
+	* to enter the Active state.
 	*/
-	virtual void OnReloadSequenceFinished();
+	virtual void OnEquipTransitionStart();
 
 	/**
-	* Server only. Called when the unequip sequence has finished and
-	* should be transitioned to the Inactive state.
+	* Controlling Client Only.
+	* Called when the Equipping state should be exited and transitioned
+	* into the Active state.
 	*/
-	virtual void OnUnquipSequenceFinished();
+	virtual void OnEquipTransitionExit();
 
 	/**
-	* Server only. Called when the empty clip sequence has finished and
-	* should be transitioned to the Active state.
+	* Controlling Client Only.
+	* Called when the Reloading state has been entered and should begin transitioning
+	* to the Active state. Responsible for calling OnReloadTransitionExit to enter 
+	* the Active state.
 	*/
-	virtual void OnEmptyClipSequenceFinished();
+	virtual void OnReloadTransitionStart();
+
+	/**
+	* Controlling Client Only.
+	* Called when the Reloading state should be exited and transitioned
+	* into the Active state.
+	*/
+	virtual void OnReloadTransitionExit();
+
+	/**
+	* Controlling Client Only.
+	* Called when the Unequipping state has been entered and should begin transitioning
+	* to the Inactive state. Responsible for calling OnUnequipTransitionExit to enter
+	* the Inactive state.
+	*/
+	virtual void OnUnequipTransitionStart();
+
+	/**
+	* Controlling Client Only.
+	* Called when the Unequipping state should be exited and transitioned
+	* into the Inactive state.
+	*/
+	virtual void OnUnequipTransitionExit();
 
 private:
 	/**
@@ -330,7 +356,7 @@ private:
 
 protected:
 	// The character that has this weapon equipped. 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, ReplicatedUsing=OnRep_BSCharacter, Category = Defaults)
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = Defaults)
 	class ABSCharacter* BSCharacter = nullptr;
 
 	// Third person mesh for the weapon
@@ -410,11 +436,11 @@ private:
 	TEnumAsByte<EWeaponState> WeaponState = EWeaponState::Inactive;
 
 	// Current ammo count
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = WeaponData, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = WeaponData, meta = (AllowPrivateAccess = "true"))
 	int32 RemainingAmmo;
 
 	// Remaining ammo left in the current clip
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = WeaponData, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = WeaponData, meta = (AllowPrivateAccess = "true"))
 	int32 RemainingClip;
 
 protected:
@@ -494,7 +520,7 @@ private:
 	void OnRep_WeaponState();
 
 	UFUNCTION()
-	virtual void OnRep_BSCharacter();
+	virtual void OnRep_Owner() override;
 };
 
 FORCEINLINE USkeletalMeshComponent* ABSWeapon::GetActiveMesh() const { return BSCharacter->IsFirstPerson() ? MeshFP : MeshTP; }

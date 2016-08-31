@@ -165,7 +165,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Weapon)
 	TSubclassOf<ABSWeapon> DefaultWeaponClass = nullptr;
 
-	UPROPERTY(BlueprintReadOnly, Replicated, Category = Weapon)
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_Weapon, Category = Weapon)
 	ABSWeapon* Weapon = nullptr;
 
 	// Socket name to attach equipped weapons
@@ -203,11 +203,7 @@ protected:
 	FName RadialDamageImpactBone;
 
 private:
-	UFUNCTION(BlueprintCallable, Category = Weapon)
 	void EquipWeapon();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerEquipWeapon();
 
 	void OnDeathAnimEnded(UAnimMontage* Montage, bool bInterupted);
 
@@ -226,14 +222,22 @@ private:
 
 	void UpdateViewTarget(const float DeltaSeconds);
 
-private:
 	UFUNCTION()
 	void OnRep_IsDying();
+
+	UFUNCTION()
+	void OnRep_Weapon();
 
 	void SetReceiveHitInfo(const float Damage, FDamageEvent const& DamageEvent, AActor* Instigator);
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerSetRunning(bool bNewRunning);
+
+	/**
+	* Server Only. 
+	* Creates weapons for the character's default loadout.
+	*/
+	void CreateDefaultLoadout();
 
 private:
 	/** First person camera */
