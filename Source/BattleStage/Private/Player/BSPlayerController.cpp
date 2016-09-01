@@ -160,14 +160,15 @@ void ABSPlayerController::ClientGameEnded_Implementation(class AActor* EndGameFo
 	}
 	
 	SetCinematicMode(true, true, true);		
+}
 
-	const float ReturnToMenuTime = 15.f;
-	FTimerHandle TimerHandle;
-	GetWorldTimerManager().SetTimer(TimerHandle, this, &ABSPlayerController::HandleReturnToMainMenu, ReturnToMenuTime);
+void ABSPlayerController::BeginInactiveState()
+{
+	Super::BeginInactiveState();
 
-	if (ABSHUD* HUD = Cast<ABSHUD>(GetHUD()))
+	if (ABSHUD* const HUD = Cast<ABSHUD>(GetHUD()))
 	{
-		HUD->ShowPostMatchUI(bIsWinner, ReturnToMenuTime);
+		HUD->ShowWaitingToRespawn(GetWorld()->GetTimeSeconds() + GetMinRespawnDelay());
 	}
 }
 

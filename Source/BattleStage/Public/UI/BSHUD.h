@@ -64,13 +64,7 @@ public:
 	/** Show/Hide the game scoreboard */
 	void ShowGameScoreboard(const bool bShowScoreboard);
 
-	/** 
-	 * Displays the post match UI 
-	 * 
-	 * @param bIsWinner				Are we on the winning team
-	 * @param CountdownToMainMenu	Seconds before we are sent to the main menu
-	 */
-	virtual void ShowPostMatchUI(const bool bIsWinner, const int32 CountdownToMainMenu);
+	void ShowWaitingToRespawn(const float RespawnTime);
 
 	/** AHUD Interface Begin */
 	virtual void DrawHUD() override;
@@ -120,7 +114,7 @@ private:
 	/**
 	 * Draws the post match UI
 	 */
-	void DrawPostMatchUI();
+	void DrawWaitingUI(const FText& TopText, const FText& BottomText);
 
 protected:
 	/** Widget type for the HUD layout, container for in-game HUD */
@@ -212,12 +206,5 @@ private:
 	/** Scaling for the UI during a draw call. Based on scale factor relative to 1080p. */
 	float UIScale = 1.f;	
 
-	struct FGameEndedInfo
-	{
-		float ReturnToMainMenuTime;
-		bool bIsWinner;
-	};
-
-	FGameEndedInfo GameEndedInfo; // Info about used on post-match UI
-	bool bIsGameEnded = false; // If the game is current in post-match
+	float RespawnTimestamp = 0; // The gametime the play will respawn 
 };

@@ -1,11 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "BattleStage.h"
-#include "CanvasItem.h"
 #include "BSHUD.h"
+
+#include "CanvasItem.h"
+#include "GameFramework/GameMode.h"
+
 #include "BSCharacter.h"
 #include "BSWeapon.h"
-
 #include "BSScoreboardWidget.h"
 #include "BSHUDLayout.h"
 #include "BSGameState.h"
@@ -60,14 +62,9 @@ void ABSHUD::ShowGameScoreboard(const bool bShowScoreboard)
 	}
 }
 
-void ABSHUD::ShowPostMatchUI(const bool bIsWinner, const int32 CountdownToMainMenu)
+void ABSHUD::ShowWaitingToRespawn(const float RespawnTime)
 {
-	bIsGameEnded = true;
-
-	GameEndedInfo.bIsWinner = bIsWinner;
-	GameEndedInfo.ReturnToMainMenuTime = GetWorld()->GetTimeSeconds() + CountdownToMainMenu;
-
-	ShowGameScoreboard(true);
+	RespawnTimestamp = RespawnTime;
 }
 
 void ABSHUD::BeginPlay()
@@ -162,19 +159,35 @@ void ABSHUD::DrawHUD()
 
 	UIScale = Canvas->ClipY / 1080.f;
 
-	if (!bIsGameEnded)
+	const AGameState* const GameState = GetWorld()->GetGameState();
+	const FName& CurrentMatchState = (GameState ? GameState->GetMatchState() : MatchState::EnteringMap);
+
+	if (CurrentMatchState == MatchState::WaitingToStart)
+	{
+		const FText WaitingText = LOCTEXT("Waiting For Match To Start", "Waiting For Match To Start");
+		DrawWaitingUI(WaitingText, FText::GetEmpty());
+	}
+	else if (CurrentMatchState == MatchState::InProgress)
 	{
 		if (ABSCharacter* Character = Cast<ABSCharacter>(GetOwningPawn()))
 		{
 			DrawCrosshair(*Character);
 			DrawLowHealthOverlay(*Character);
+			DrawDamageIndicator();
+		}		
+		else if (GetWorld()->GetTimeSeconds() < RespawnTimestamp)
+		{
+			const FString RespawnText = FString::Printf(TEXT("Waiting to respawn... %d"), (int32)(RespawnTimestamp - GetWorld()->GetTimeSeconds()));
+			DrawWaitingUI(FText::FromString(RespawnText), FText::GetEmpty());
 		}
-
-		DrawDamageIndicator();
 	}
-	else
+	else if (CurrentMatchState == MatchState::WaitingPostMatch)
 	{
-		DrawPostMatchUI();
+		ShowGameScoreboard(true);
+
+		const FText MatchOverText = LOCTEXT("Match Over", "Match Over");
+		const FText WaitingForNewMatch = LOCTEXT("Waiting For New Match", "Waiting For New Match...");		
+		DrawWaitingUI(MatchOverText, WaitingForNewMatch);
 	}
 
 	DrawEventFeed();
@@ -394,16 +407,8 @@ void ABSHUD::DrawPersonalEventMessage()
 	}
 }
 
-void ABSHUD::DrawPostMatchUI()
+void ABSHUD::DrawWaitingUI(const FText& TopText, const FText& BottomText)
 {
-	const FText MatchWonText = LOCTEXT("Match Won", "Match Won");
-	const FText MatchLossText = LOCTEXT("Match Loss", "Match Loss");	
-
-	const int32 RemainingTime = static_cast<int32>(FMath::Max(0.f, GameEndedInfo.ReturnToMainMenuTime - GetWorld()->GetTimeSeconds()));
-
-	const FString ReturnToMainMenuString = FString::Printf(TEXT("Returning to main menu... %d"), RemainingTime);
-	const FText ReturnToMainMenuText = FText::FromString(ReturnToMainMenuString);
-
 	Canvas->SetDrawColor(FColor::White);
 
 	FCanvasTextItem TextItem{ FVector2D::ZeroVector, FText::GetEmpty(), LargeFont, FLinearColor::White };
@@ -415,26 +420,31 @@ void ABSHUD::DrawPostMatchUI()
 
 	FVector2D TextSize;
 
-	// Draw match result text
-	const FText& MatchResultText = (GameEndedInfo.bIsWinner) ? MatchWonText : MatchLossText;
-	TextItem.Text = MatchResultText;
-	Canvas->StrLen(LargeFont, MatchResultText.ToString(), TextSize.X, TextSize.Y);
-	const FVector2D MatchResultPosition{ CenterX, 200.f * UIScale };
-	const FVector2D MatchResultOffset{ TextSize.X / 2.f, TextSize.Y / 2.f };
+	if (!TopText.IsEmpty())
+	{
+		// Draw top text
+		TextItem.Text = TopText;
+		Canvas->StrLen(LargeFont, TopText.ToString(), TextSize.X, TextSize.Y);
+		const FVector2D TopTextPosition{ CenterX, 200.f * UIScale };
+		const FVector2D TopTextOffset{ TextSize.X / 2.f, TextSize.Y / 2.f };
 
-	TextItem.Position = MatchResultPosition - MatchResultOffset * TextItem.Scale;
+		TextItem.Position = TopTextPosition - TopTextOffset * TextItem.Scale;
 
-	Canvas->DrawItem(TextItem);
+		Canvas->DrawItem(TextItem);
+	}
 
-	// Draw Returning to main menu text
-	Canvas->StrLen(LargeFont, ReturnToMainMenuString, TextSize.X, TextSize.Y);
-	TextItem.Text = ReturnToMainMenuText;
-	const FVector2D ReturnMenuPosition{ CenterX, Canvas->ClipY - 200.f * UIScale };
-	const FVector2D ReturnMenuOffset{ TextSize.X / 2.f, TextSize.Y / 2.f };
+	if (!BottomText.IsEmpty())
+	{
+		// Draw bottom text
+		Canvas->StrLen(LargeFont, BottomText.ToString(), TextSize.X, TextSize.Y);
+		TextItem.Text = BottomText;
+		const FVector2D BottomTextPosition{ CenterX, Canvas->ClipY - 200.f * UIScale };
+		const FVector2D BottomTextOffset{ TextSize.X / 2.f, TextSize.Y / 2.f };
 
-	TextItem.Position = ReturnMenuPosition - ReturnMenuOffset * TextItem.Scale;
+		TextItem.Position = BottomTextPosition - BottomTextOffset * TextItem.Scale;
 
-	Canvas->DrawItem(TextItem);
+		Canvas->DrawItem(TextItem);
+	}
 }
 
 #undef LOCTEXT_NAMESPACE

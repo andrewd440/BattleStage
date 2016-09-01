@@ -167,6 +167,9 @@ void ABSGameMode::HandleMatchHasEnded()
 		AController* const Controller = *ItrController;
 		Controller->GameHasEnded(nullptr, Controller->PlayerState == WinningPlayer);
 	}
+
+	FTimerHandle RestartHandle;
+	GetWorld()->GetTimerManager().SetTimer(RestartHandle, this, &ABSGameMode::RestartGame, 10.f, false);
 }
 
 bool ABSGameMode::ReadyToEndMatch_Implementation()
