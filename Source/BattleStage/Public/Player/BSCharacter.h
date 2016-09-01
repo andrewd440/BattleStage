@@ -103,7 +103,7 @@ public:
 	bool CanDie() const;
 
 	UFUNCTION(BlueprintCallable, Category = Health)
-	int32 GetHealth() const;		
+	int32 GetHealth() const;			
 
 protected:
 	/**

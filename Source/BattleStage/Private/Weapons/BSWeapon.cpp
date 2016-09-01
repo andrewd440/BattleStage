@@ -143,6 +143,11 @@ void ABSWeapon::AttachToOwner()
 		ActiveMesh->AttachToComponent(BSCharacter->GetActiveMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, AttachSocket);
 		ActiveMesh->SetHiddenInGame(false);
 	}
+	else
+	{
+		// Only shot MeshTP there is no character owner
+		MeshTP->SetHiddenInGame(false);
+	}
 }
 
 void ABSWeapon::DetachFromOwner()

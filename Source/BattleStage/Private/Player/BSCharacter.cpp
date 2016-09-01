@@ -391,21 +391,22 @@ void ABSCharacter::Die(FDamageEvent const& DamageEvent, AController* Killer)
 {
 	bIsDying = true;
 	bReplicateMovement = false;
-	bTearOff = true;
+	TearOff();
 
 	ABSGameMode* GameMode = Cast<ABSGameMode>(GetWorld()->GetAuthGameMode());
 	GameMode->ScoreKill(Killer, GetController());
 
-	// #bstodo Must detach equipped weapon and destroy loadout
+	if (Weapon)
+	{
+		Weapon->SetLifeSpan(5.f);
+	}
 
 	// Detach controller, character will be destroyed soon
 	DetachFromControllerPendingDestroy();
 
 	if (GetNetMode() != NM_DedicatedServer)
 	{
-		UpdateMeshVisibility();
-
-		OnDeath();
+		OnRep_IsDying();
 	}
 }
 
