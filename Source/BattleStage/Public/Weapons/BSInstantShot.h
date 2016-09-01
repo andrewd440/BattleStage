@@ -52,7 +52,11 @@ public:
 	/** UObject interface end */
 
 protected:
-	void PlayTrailEffects(const FVector& Start, const FVector& End) const;
+
+	/**
+	* Plays shot trial effects, if assigned, from the current weapon fire location to a specified end location.
+	*/
+	void PlayTrailEffects(const FVector& End) const;
 
 	void PlayImpactEffects(const FHitResult& Hit) const;
 

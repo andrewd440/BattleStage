@@ -360,20 +360,25 @@ void ABSCharacter::PostInitProperties()
 
 float ABSCharacter::TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	const float ActualDamage = Super::TakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
+	float ActualDamage = 0;
 
-	TakeHit(ActualDamage, DamageEvent, EventInstigator, DamageCauser);
-
-	if (ActualDamage > 0)
+	if (Health > 0)
 	{
-		Health -= ActualDamage;
+		ActualDamage = Super::TakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
 
-		if (Health <= 0)
+		TakeHit(ActualDamage, DamageEvent, EventInstigator, DamageCauser);
+
+		if (ActualDamage > 0)
 		{
-			Die(DamageEvent, EventInstigator);
+			Health -= ActualDamage;
+
+			if (Health <= 0)
+			{
+				Die(DamageEvent, EventInstigator);
+			}
 		}
 	}
-
+	
 	return ActualDamage;
 }
 
@@ -441,8 +446,6 @@ void ABSCharacter::UpdateViewTarget(const float DeltaSeconds)
 void ABSCharacter::TakeHit(const float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	SetReceiveHitInfo(Damage, DamageEvent, DamageCauser);
-
-	//ApplyDamageMomentum(Damage, DamageEvent, nullptr, DamageCauser);
 	
 	if(GetNetMode() != NM_DedicatedServer)
 		OnReceiveHit();

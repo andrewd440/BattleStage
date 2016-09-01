@@ -60,10 +60,13 @@ void UBSInstantShot::InvokeShot(const FShotData& ShotData)
 	}	
 }
 
-void UBSInstantShot::PlayTrailEffects(const FVector& Start, const FVector& End) const
+void UBSInstantShot::PlayTrailEffects(const FVector& End) const
 {
 	if (TrailFX)
-	{		
+	{	
+		const ABSWeapon* const Weapon = GetWeapon();
+
+		const FVector Start = Weapon->GetFireLocation();
 		const FVector DirectionVector = (End - Start);
 
 		UParticleSystemComponent* TrailComponent = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), TrailFX, Start, DirectionVector.GetUnsafeNormal().Rotation());
@@ -111,7 +114,7 @@ void UBSInstantShot::RespondValidatedShot(const FShotData& ShotData)
 		if (ShotData.Impact.bBlockingHit)
 			PlayImpactEffects(ShotData.Impact);
 
-		PlayTrailEffects(ShotData.Start, ShotEnd);
+		PlayTrailEffects(ShotEnd);
 	}
 }
 
@@ -129,7 +132,7 @@ void UBSInstantShot::SimulateFire(const FVector& Target) const
 	if (Impact.bBlockingHit)
 		PlayImpactEffects(Impact);
 
-	PlayTrailEffects(Weapon->GetFireLocation(), Impact.ImpactPoint);
+	PlayTrailEffects(Impact.bBlockingHit ? Impact.ImpactPoint : Impact.TraceEnd);
 }
 
 FHitResult UBSInstantShot::WeaponTrace(const FVector& Start, const FVector& End) const
