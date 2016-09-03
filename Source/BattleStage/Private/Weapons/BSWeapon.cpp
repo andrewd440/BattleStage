@@ -363,18 +363,12 @@ void ABSWeapon::OnReloadTransitionStart()
 {
 	OnEnteredReloadingState();
 
-	float TransitionTime = 0.f;
-	if (UAnimMontage* const Montage = GetWeaponMontage(ReloadAnim))
-	{
-		TransitionTime = Montage->GetPlayLength();
-	}
-
 	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
 	TimerManager.ClearTimer(WeaponStateTimer);
 	
-	if (TransitionTime >= 0.f)
+	if (WeaponStats.ReloadSpeed >= 0.f)
 	{
-		TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnReloadTransitionExit, TransitionTime);
+		TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnReloadTransitionExit, WeaponStats.ReloadSpeed);
 	}
 	else
 	{
