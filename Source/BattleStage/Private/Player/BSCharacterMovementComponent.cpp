@@ -3,8 +3,6 @@
 #include "BattleStage.h"
 #include "BSCharacterMovementComponent.h"
 
-#include "BSCharacter.h"
-
 UBSCharacterMovementComponent::UBSCharacterMovementComponent(const FObjectInitializer& ObjectInitializer /*= FObjectInitializer::Get()*/)
 	: Super(ObjectInitializer)
 {

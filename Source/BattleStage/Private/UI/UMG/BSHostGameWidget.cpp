@@ -2,7 +2,6 @@
 
 #include "BattleStage.h"
 #include "BSHostGameWidget.h"
-#include "BSGameInstance.h"
 
 bool UBSHostGameWidget::HostGame(const FString& MatchOptions)
 {

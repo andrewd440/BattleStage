@@ -6,12 +6,9 @@
 #include "CanvasItem.h"
 #include "GameFramework/GameMode.h"
 
-#include "BSCharacter.h"
 #include "BSWeapon.h"
 #include "BSScoreboardWidget.h"
 #include "BSHUDLayout.h"
-#include "BSGameState.h"
-#include "BSPlayerState.h"
 
 #define LOCTEXT_NAMESPACE "BattleStage.HUD"
 

@@ -2,7 +2,6 @@
 
 #include "BattleStage.h"
 #include "BSUserWidget.h"
-#include "BSGameInstance.h"
 
 
 UBSGameInstance* UBSUserWidget::GetGameInstance() const

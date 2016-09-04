@@ -3,9 +3,6 @@
 #include "BattleStage.h"
 #include "BSHUDWidget_GameClock.h"
 
-#include "BSGameState.h"
-#include "BSPlayerState.h"
-
 void UBSHUDWidget_GameClock::NativeConstruct()
 {
 	Super::NativeConstruct();

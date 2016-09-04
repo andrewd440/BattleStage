@@ -6,7 +6,14 @@
 #include "Engine.h"
 #include "UMG.h"
 #include "Net/UnrealNetwork.h"
-#include "GameModes/BSGameMode.h"
+
+#include "BSGameInstance.h"
+#include "BSGameMode.h"
+#include "BSGameState.h"
+#include "BSPlayerState.h"
+#include "BSPlayerController.h"
+#include "BSCharacter.h"
+#include "BSTypes.h"
 
 
 DECLARE_LOG_CATEGORY_EXTERN(BattleStage, Log, All);

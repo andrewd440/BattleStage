@@ -2,8 +2,8 @@
 
 #include "BattleStage.h"
 #include "BSGameInstance.h"
+
 #include "Online/BSGameSession.h"
-#include "BSTypes.h"
 #include "BSMatchConfig.h"
 #include "OnlineSubsystemUtils.h"
 

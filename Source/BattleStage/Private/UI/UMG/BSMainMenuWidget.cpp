@@ -2,9 +2,9 @@
 
 #include "BattleStage.h"
 #include "BSMainMenuWidget.h"
+
 #include "BSServerBrowserWidget.h"
 #include "BSHostGameWidget.h"
-#include "BSGameInstance.h"
 #include "ContentWidget.h"
 
 void UBSMainMenuWidget::Quit()

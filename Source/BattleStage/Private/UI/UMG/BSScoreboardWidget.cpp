@@ -3,8 +3,6 @@
 #include "BattleStage.h"
 #include "BSScoreboardWidget.h"
 
-#include "GameModes/BSGameState.h"
-#include "BSPlayerState.h"
 #include "BSScoreboardEntry.h"
 
 static auto EntrySortPredicate = [](const UBSScoreboardEntry& Lhs, const UBSScoreboardEntry& Rhs) 

@@ -3,8 +3,6 @@
 #include "BattleStage.h"
 #include "BSScoreboardEntry.h"
 
-#include "BSPlayerState.h"
-
 UBSScoreboardEntry::UBSScoreboardEntry(const FObjectInitializer& ObjectInitalizer /*= FObjectInitializer::Get()*/)
 	: Super(ObjectInitalizer)
 {

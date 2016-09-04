@@ -2,7 +2,6 @@
 
 #include "BattleStage.h"
 #include "BSServerBrowserWidget.h"
-#include "BSGameInstance.h"
 #include "BSGameSession.h"
 
 

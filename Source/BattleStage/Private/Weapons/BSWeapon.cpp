@@ -4,11 +4,9 @@
 
 #include "Engine/ActorChannel.h"
 
-#include "BSCharacter.h"
 #include "BSNetworkUtils.h"
 #include "BSShotType.h"
 #include "BSWeapon.h"
-#include "BSPlayerController.h"
 
 ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
