@@ -1,4 +1,4 @@
-// Copyright 1998-2015 Epic Games, Inc. All Rights Reserved.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "BattleStage.h"
 #include "BSProjectile.h"
@@ -7,7 +7,8 @@
 
 #include "BSExplosion.h"
 
-ABSProjectile::ABSProjectile() 
+ABSProjectile::ABSProjectile(const FObjectInitializer& ObjectInitializer /*= FObjectInitializer::Get()*/)
+	: Super(ObjectInitializer)
 {
 	bReplicates = true;
 	bReplicateMovement = true;
@@ -31,42 +32,9 @@ ABSProjectile::ABSProjectile()
 	ProjectileMovement->MaxSpeed = 3000.f;
 	ProjectileMovement->ProjectileGravityScale = 0.0f;
 	ProjectileMovement->bRotationFollowsVelocity = true;
-	ProjectileMovement->OnProjectileStop.AddDynamic(this, &ABSProjectile::OnImpact);
 
 	// Die after 3 seconds by default
 	InitialLifeSpan = 3.0f;
-}
-
-void ABSProjectile::OnImpact(const FHitResult& Hit)
-{
-	if (ExplosionEffect)
-	{
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.Instigator = GetInstigator();
-		SpawnParams.Owner = this;
-
-		GetWorld()->SpawnActor<ABSExplosion>(ExplosionEffect, GetActorLocation(), FRotator::ZeroRotator, SpawnParams);
-	}
-
-	if (HasAuthority())
-	{
-		TArray<AActor*> ToIgnore;
-		ToIgnore.Add(this);
-
-		bool bDamagedActor = UGameplayStatics::ApplyRadialDamageWithFalloff(this, 
-			Damage.BaseDamage, 
-			Damage.MinimumDamage, 
-			GetActorLocation(), 
-			Damage.InnerRadius, 
-			Damage.OuterRadius, 
-			Damage.DamageFalloff, 
-			DamageTypeClass, 
-			ToIgnore,
-			this,
-			GetInstigatorController());
-
-		Destroy();
-	}
 }
 
 void ABSProjectile::PostActorCreated()
@@ -74,4 +42,46 @@ void ABSProjectile::PostActorCreated()
 	// Make sure we don't hit the weapon or character firing
 	CollisionComp->IgnoreActorWhenMoving(GetOwner(), true);
 	CollisionComp->IgnoreActorWhenMoving(GetInstigator(), true);
+}
+
+void ABSProjectile::LifeSpanExpired()
+{
+	Detonate();	
+}
+
+void ABSProjectile::Detonate()
+{
+	if (ExplosionEffect)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Instigator = GetInstigator();
+		SpawnParams.Owner = this;
+
+		GetWorld()->SpawnActor<ABSExplosion>(ExplosionEffect, GetActorLocation(), GetActorRotation(), SpawnParams);
+	}
+
+	if (HasAuthority())
+	{
+		TArray<AActor*> ToIgnore;
+		ToIgnore.Add(this);
+
+		bool bDamagedActor = UGameplayStatics::ApplyRadialDamageWithFalloff(this,
+			Damage.BaseDamage,
+			Damage.MinimumDamage,
+			GetActorLocation(),
+			Damage.InnerRadius,
+			Damage.OuterRadius,
+			Damage.DamageFalloff,
+			DamageTypeClass,
+			ToIgnore,
+			this,
+			GetInstigatorController());
+
+		OnDetonate();
+		Destroy();
+	}	
+	else
+	{
+		OnDetonate();
+	}
 }

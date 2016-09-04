@@ -2,7 +2,7 @@
 	"FileVersion": 3,
 	"EngineAssociation": "4.12",
 	"Category": "",
-	"Description": "",
+	"Description": "My Copyright",
 	"Modules": [
 		{
 			"Name": "BattleStage",

@@ -3,8 +3,6 @@
 #include "BattleStage.h"
 #include "BSDMGameMode.h"
 
-
-
 ABSDMGameMode::ABSDMGameMode(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {

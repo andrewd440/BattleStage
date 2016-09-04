@@ -1,7 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "BattleStage.h"
-#include "BSPlayerState.h"
 
 void ABSPlayerState::ScoreKill(ABSPlayerState* Killed, int32 Points)
 {

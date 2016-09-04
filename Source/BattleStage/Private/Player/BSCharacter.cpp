@@ -8,9 +8,7 @@
 
 #include "BSProjectile.h"
 #include "BSWeapon.h"
-#include "BSGameMode.h"
 #include "BSCharacterMovementComponent.h"
-#include "BSPlayerController.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
