@@ -3,6 +3,8 @@
 #include "BattleStage.h"
 #include "BSNetworkUtils.h"
 
+#include "BSPlayerController.h"
+
 void UBSNetworkUtils::PlaySound(USoundBase* Sound, AActor* SourceActor, const FVector& SoundLocation, const EReplicationOption ReplicationOption)
 {
 	if (!Sound)

@@ -14,14 +14,19 @@ class BATTLESTAGE_API UBSProjectileShot : public UBSShotType
 	GENERATED_BODY()
 	
 public:
-	/** UBSShotType Interface Begin */
+
+	//-----------------------------------------------------------------
+	// UBSShotType Interface
+	//-----------------------------------------------------------------
 	virtual bool GetShotData(FShotData& OutShotData) const override;
 	virtual void InvokeShot(const FShotData& ShotData) override;
-	/** UBSShotType Interface End */
+	//-----------------------------------------------------------------
+	// UBSShotType Interface End 
+	//-----------------------------------------------------------------	
 
 protected:
 	/** Spawns a projectile of ProjectileType */
-	virtual void SpawnProjectile(const FVector& Location, const FVector& Direction) const;
+	virtual void SpawnProjectile(FVector Location, FVector_NetQuantize Direction) const;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = ProjectileShot)

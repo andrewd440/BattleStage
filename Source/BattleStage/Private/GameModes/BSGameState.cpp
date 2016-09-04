@@ -3,6 +3,8 @@
 #include "BattleStage.h"
 #include "BSGameState.h"
 
+#include "Player/BSPlayerState.h"
+
 DEFINE_LOG_CATEGORY_STATIC(ABSGameState, Warning, All);
 
 void ABSGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

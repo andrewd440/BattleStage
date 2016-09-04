@@ -1,12 +1,14 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "BattleStage.h"
-#include "BSWeapon.h"
 
 #include "Engine/ActorChannel.h"
 
+#include "BSCharacter.h"
 #include "BSNetworkUtils.h"
 #include "BSShotType.h"
+#include "BSWeapon.h"
+#include "BSPlayerController.h"
 
 ABSWeapon::ABSWeapon(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)

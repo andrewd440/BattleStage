@@ -29,7 +29,7 @@ void UBSProjectileShot::InvokeShot(const FShotData& ShotData)
 	SpawnProjectile(ShotData.Start, ShotData.Direction);
 }
 
-void UBSProjectileShot::SpawnProjectile(const FVector& Location, const FVector& Direction) const
+void UBSProjectileShot::SpawnProjectile(FVector Location, FVector_NetQuantize Direction) const
 {
 	if (ProjectileType)
 	{

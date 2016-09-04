@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 1998-2015 Epic Games, Inc. All Rights Reserved.
 
 #include "BattleStage.h"
 #include "BSProjectile.h"
@@ -7,8 +7,7 @@
 
 #include "BSExplosion.h"
 
-ABSProjectile::ABSProjectile(const FObjectInitializer& ObjectInitializer /*= FObjectInitializer::Get()*/)
-	: Super(ObjectInitializer)
+ABSProjectile::ABSProjectile() 
 {
 	bReplicates = true;
 	bReplicateMovement = true;
@@ -32,24 +31,13 @@ ABSProjectile::ABSProjectile(const FObjectInitializer& ObjectInitializer /*= FOb
 	ProjectileMovement->MaxSpeed = 3000.f;
 	ProjectileMovement->ProjectileGravityScale = 0.0f;
 	ProjectileMovement->bRotationFollowsVelocity = true;
+	ProjectileMovement->OnProjectileStop.AddDynamic(this, &ABSProjectile::OnImpact);
 
 	// Die after 3 seconds by default
 	InitialLifeSpan = 3.0f;
 }
 
-void ABSProjectile::PostActorCreated()
-{
-	// Make sure we don't hit the weapon or character firing
-	CollisionComp->IgnoreActorWhenMoving(GetOwner(), true);
-	CollisionComp->IgnoreActorWhenMoving(GetInstigator(), true);
-}
-
-void ABSProjectile::LifeSpanExpired()
-{
-	Detonate();	
-}
-
-void ABSProjectile::Detonate()
+void ABSProjectile::OnImpact(const FHitResult& Hit)
 {
 	if (ExplosionEffect)
 	{
@@ -57,7 +45,7 @@ void ABSProjectile::Detonate()
 		SpawnParams.Instigator = GetInstigator();
 		SpawnParams.Owner = this;
 
-		GetWorld()->SpawnActor<ABSExplosion>(ExplosionEffect, GetActorLocation(), GetActorRotation(), SpawnParams);
+		GetWorld()->SpawnActor<ABSExplosion>(ExplosionEffect, GetActorLocation(), FRotator::ZeroRotator, SpawnParams);
 	}
 
 	if (HasAuthority())
@@ -65,23 +53,25 @@ void ABSProjectile::Detonate()
 		TArray<AActor*> ToIgnore;
 		ToIgnore.Add(this);
 
-		bool bDamagedActor = UGameplayStatics::ApplyRadialDamageWithFalloff(this,
-			Damage.BaseDamage,
-			Damage.MinimumDamage,
-			GetActorLocation(),
-			Damage.InnerRadius,
-			Damage.OuterRadius,
-			Damage.DamageFalloff,
-			DamageTypeClass,
+		bool bDamagedActor = UGameplayStatics::ApplyRadialDamageWithFalloff(this, 
+			Damage.BaseDamage, 
+			Damage.MinimumDamage, 
+			GetActorLocation(), 
+			Damage.InnerRadius, 
+			Damage.OuterRadius, 
+			Damage.DamageFalloff, 
+			DamageTypeClass, 
 			ToIgnore,
 			this,
 			GetInstigatorController());
 
-		OnDetonate();
 		Destroy();
-	}	
-	else
-	{
-		OnDetonate();
 	}
+}
+
+void ABSProjectile::PostActorCreated()
+{
+	// Make sure we don't hit the weapon or character firing
+	CollisionComp->IgnoreActorWhenMoving(GetOwner(), true);
+	CollisionComp->IgnoreActorWhenMoving(GetInstigator(), true);
 }

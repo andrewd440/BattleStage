@@ -3,8 +3,9 @@
 #include "BattleStage.h"
 #include "BSScoreboardWidget.h"
 
+#include "GameModes/BSGameState.h"
+#include "BSPlayerState.h"
 #include "BSScoreboardEntry.h"
-#include "BSGameState.h"
 
 static auto EntrySortPredicate = [](const UBSScoreboardEntry& Lhs, const UBSScoreboardEntry& Rhs) 
 { 
@@ -115,7 +116,7 @@ void UBSScoreboardWidget::NativeDestruct()
 	ScoreboardEntryPanel->ClearChildren();	
 }
 
-void UBSScoreboardWidget::InitializeScoreboard(const ABSGameState& GameState)
+void UBSScoreboardWidget::InitializeScoreboard(ABSGameState& GameState)
 {
 	APlayerController* const OwningPlayer = GetOwningPlayer();
 

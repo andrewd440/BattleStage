@@ -1,10 +1,15 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 1998-2015 Epic Games, Inc. All Rights Reserved.
 
 #include "BattleStage.h"
 #include "BSGameMode.h"
 
+#include "BSCharacter.h"
+#include "BSPlayerController.h"
+#include "BSGameState.h"
+#include "BSPlayerState.h"
 #include "BSHUD.h"
 #include "BSGameSession.h"
+#include "BSTypes.h"
 
 DEFINE_LOG_CATEGORY_STATIC(BSGameMode, Warning, All);
 

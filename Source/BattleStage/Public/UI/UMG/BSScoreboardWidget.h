@@ -6,7 +6,6 @@
 #include "BSScoreboardWidget.generated.h"
 
 struct FScoreEvent;
-class ABSGameState;
 
 /**
  * Represents the in-game scoreboard for the ongoing game.
@@ -23,7 +22,7 @@ public:
 	UBSScoreboardWidget(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 protected:
-	virtual void InitializeScoreboard(const ABSGameState& GameState);
+	virtual void InitializeScoreboard(ABSGameState& GameState);
 
 	/** UUserWidget Interface Begin */
 	virtual void NativeConstruct() override;
