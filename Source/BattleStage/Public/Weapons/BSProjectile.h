@@ -20,8 +20,8 @@ public:
 	ABSProjectile(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	/** AActor Interface Begin */
-	virtual void PostActorCreated() override;
-	virtual void LifeSpanExpired() override;
+	virtual void PostInitializeComponents() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	/** AActor Interface End */
 
 protected:
@@ -33,8 +33,31 @@ protected:
 	virtual void Detonate();
 
 	/** Called after the projectile has been detonated and is about to be destroyed. */
-	UFUNCTION(BlueprintImplementableEvent, Category = Projectile)
+	UFUNCTION(BlueprintNativeEvent, Category = Projectile)
 	void OnDetonate();
+
+	UFUNCTION()
+	virtual void OnImpact(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+
+	UFUNCTION()
+	virtual void OnStop(const FHitResult& ImpactResult);
+
+	/** 
+	 * Called after the projectile has been detonated to allow the server to deactivate itself and allow
+	 * detonation to be replicated to clients before destruction. 
+	 */
+	virtual void Deactivate();
+
+	/** Blueprint hook to allow blueprint created objects to be deactivated */
+	UFUNCTION(BlueprintImplementableEvent, Category = Projectile)
+	void OnDeactivate();
+
+private:
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerDetonate();
+
+	UFUNCTION()
+	void OnRep_IsDetonated();
 
 protected:
 	/** Effect generated when the projectile is detonated */
@@ -42,7 +65,7 @@ protected:
 	TSubclassOf<class ABSExplosion> ExplosionEffect;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Damage)
-	FRadialDamageParams Damage;
+	FRadialDamageParams Damage; // #bstodo Might want to modify this based on the stats of the firing weapon
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Damage)
 	TSubclassOf<class UDamageType> DamageTypeClass;
@@ -56,6 +79,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 	class UProjectileMovementComponent* ProjectileMovement;
 
+	UPROPERTY(ReplicatedUsing = OnRep_IsDetonated)
+	uint32 bIsDetonated : 1;
+
 public:
 	/** Returns CollisionComp subobject **/
 	FORCEINLINE class USphereComponent* GetCollisionComp() const { return CollisionComp; }
@@ -64,3 +90,28 @@ public:
 	FORCEINLINE class UProjectileMovementComponent* GetProjectileMovement() const { return ProjectileMovement; }
 };
 
+// #bstodo Figure out weird build bug that causes undefined compile error when ABSImpactGrenade is in a separate file.
+/**
+*
+*/
+UCLASS()
+class BATTLESTAGE_API ABSImpactGrenade : public ABSProjectile
+{
+	GENERATED_BODY()
+
+public:
+	ABSImpactGrenade(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+
+	/** AActor Interface Begin */
+	virtual void BeginPlay() override;
+	/** AActor Interface End */
+
+protected:
+	/** ABSProjectile Interface Begin */
+	virtual void OnImpact(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit) override;
+	/** ABSProjectile Interface End */
+
+protected:
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = ImpactGrenade)
+	float FuzeTime;
+};

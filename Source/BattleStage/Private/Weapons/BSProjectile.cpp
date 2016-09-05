@@ -17,6 +17,8 @@ ABSProjectile::ABSProjectile(const FObjectInitializer& ObjectInitializer /*= FOb
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
 	CollisionComp->InitSphereRadius(5.0f);
 	CollisionComp->BodyInstance.SetCollisionProfileName("Projectile");
+	CollisionComp->SetNotifyRigidBodyCollision(true);
+	CollisionComp->bGenerateOverlapEvents = false;
 
 	// Players can't walk on it
 	CollisionComp->SetWalkableSlopeOverride(FWalkableSlopeOverride(WalkableSlope_Unwalkable, 0.f));
@@ -35,23 +37,97 @@ ABSProjectile::ABSProjectile(const FObjectInitializer& ObjectInitializer /*= FOb
 
 	// Die after 3 seconds by default
 	InitialLifeSpan = 3.0f;
+
+	bIsDetonated = false;
 }
 
-void ABSProjectile::PostActorCreated()
+void ABSProjectile::PostInitializeComponents()
 {
-	Super::PostActorCreated();
+	Super::PostInitializeComponents();
+	CollisionComp->OnComponentHit.AddDynamic(this, &ABSProjectile::OnImpact);
+
+	ProjectileMovement->OnProjectileStop.RemoveAll(this);
+	ProjectileMovement->OnProjectileStop.AddDynamic(this, &ABSProjectile::OnStop);
 
 	// Make sure we don't hit the weapon or character firing
 	CollisionComp->IgnoreActorWhenMoving(GetOwner(), true);
 	CollisionComp->IgnoreActorWhenMoving(GetInstigator(), true);
 }
 
-void ABSProjectile::LifeSpanExpired()
+void ABSProjectile::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	DOREPLIFETIME(ABSProjectile, bIsDetonated);
+}
+
+void ABSProjectile::Detonate()
+{
+	if (!bIsDetonated)
+	{
+		if (!HasAuthority())
+		{
+			ServerDetonate();
+		}
+		else
+		{
+			TArray<AActor*> ToIgnore;
+			ToIgnore.Add(this);
+
+			bool bDamagedActor = UGameplayStatics::ApplyRadialDamageWithFalloff(this,
+				Damage.BaseDamage,
+				Damage.MinimumDamage,
+				GetActorLocation(),
+				Damage.InnerRadius,
+				Damage.OuterRadius,
+				Damage.DamageFalloff,
+				DamageTypeClass,
+				ToIgnore,
+				this,
+				GetInstigatorController());
+
+			bIsDetonated = true;
+			OnDetonate();
+
+			Deactivate();
+			TearOff();
+		}
+	}
+}
+
+void ABSProjectile::OnImpact(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+
+}
+
+void ABSProjectile::OnStop(const FHitResult& ImpactResult)
+{
+
+}
+
+void ABSProjectile::Deactivate()
+{
+	if (!IsPendingKillPending())
+	{
+		SetActorEnableCollision(false);
+		ProjectileMovement->SetActive(false);
+
+		OnDeactivate();
+		SetLifeSpan(0.5f); // Allow replication time to clients for detonation
+	}
+
+	bIsDetonated = true;
+}
+
+void ABSProjectile::ServerDetonate_Implementation()
 {
 	Detonate();
 }
 
-void ABSProjectile::Detonate()
+bool ABSProjectile::ServerDetonate_Validate()
+{
+	return true;
+}
+
+void ABSProjectile::OnDetonate_Implementation()
 {
 	if (ExplosionEffect)
 	{
@@ -61,29 +137,35 @@ void ABSProjectile::Detonate()
 
 		GetWorld()->SpawnActor<ABSExplosion>(ExplosionEffect, GetActorLocation(), GetActorRotation(), SpawnParams);
 	}
+}
 
-	if (HasAuthority())
+void ABSProjectile::OnRep_IsDetonated()
+{
+	OnDetonate();
+	Destroy();
+}
+
+ABSImpactGrenade::ABSImpactGrenade(const FObjectInitializer& ObjectInitializer /*= FObjectInitializer::Get()*/)
+	: Super(ObjectInitializer)
+{
+	FuzeTime = 2.f;
+}
+
+void ABSImpactGrenade::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (HasAuthority() && FuzeTime > 0.f)
 	{
-		TArray<AActor*> ToIgnore;
-		ToIgnore.Add(this);
-
-		bool bDamagedActor = UGameplayStatics::ApplyRadialDamageWithFalloff(this,
-			Damage.BaseDamage,
-			Damage.MinimumDamage,
-			GetActorLocation(),
-			Damage.InnerRadius,
-			Damage.OuterRadius,
-			Damage.DamageFalloff,
-			DamageTypeClass,
-			ToIgnore,
-			this,
-			GetInstigatorController());
-
-		OnDetonate();
-		Destroy();
+		FTimerHandle FuzeHandle;
+		GetWorld()->GetTimerManager().SetTimer(FuzeHandle, this, &ABSImpactGrenade::Detonate, FuzeTime);
 	}
-	else
+}
+
+void ABSImpactGrenade::OnImpact(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (HasAuthority() && Cast<ABSCharacter>(OtherActor))
 	{
-		OnDetonate();
+		Detonate();
 	}
 }

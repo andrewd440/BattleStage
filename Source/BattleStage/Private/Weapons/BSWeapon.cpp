@@ -199,25 +199,15 @@ UAnimMontage* ABSWeapon::GetWeaponMontage(const FWeaponAnim& WeaponAnim)
 
 void ABSWeapon::PlayFiringSequence()
 {
-	const bool bMustSpawnFX = (!MuzzleFX->IsLooping() || !MuzzleFXComponent);
-	if (MuzzleFX && bMustSpawnFX)
+	if (MuzzleFX && (!MuzzleFX->IsLooping() || !MuzzleFXComponent))
 	{
-		if (bMustSpawnFX)
-		{
-			MuzzleFXComponent = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, GetActiveMesh(), MuzzleSocket);
-		}			
-
-		MuzzleFXComponent->Activate(true);
+		MuzzleFXComponent = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, GetActiveMesh(), MuzzleSocket);
+		MuzzleFXComponent->Activate();			
 	}
 
-	const bool bMustSpawnSound = (!FireSound->IsLooping() || !FireSoundComponent);
-	if (FireSound && bMustSpawnSound)
+	if (FireSound && (!FireSound->IsLooping() || !FireSoundComponent))
 	{
-		if (bMustSpawnSound)
-		{
-			FireSoundComponent = UGameplayStatics::SpawnSoundAttached(FireSound, GetActiveMesh(), MuzzleSocket);
-		}			
-		
+		FireSoundComponent = UGameplayStatics::SpawnSoundAttached(FireSound, GetActiveMesh(), MuzzleSocket);
 		FireSoundComponent->Play();
 	}
 
@@ -225,8 +215,6 @@ void ABSWeapon::PlayFiringSequence()
 	{
 		BSCharacter->PlayAnimMontage(FireMontage);
 	}
-
-	BSCharacter->AddControllerPitchInput(-.1f);
 
 	if (FireCameraShake &&
 		BSCharacter->IsFirstPerson() &&
