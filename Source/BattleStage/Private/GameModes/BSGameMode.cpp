@@ -136,6 +136,11 @@ TSubclassOf<UBSScoreboardWidget> ABSGameMode::GetScoreboardWidget() const
 	return ScoreboardWidget;
 }
 
+bool ABSGameMode::ShouldSpawnAtStartSpot(AController* Player)
+{
+	return false;
+}
+
 void ABSGameMode::CheckScore(ABSPlayerState* Player)
 {
 	if (!bIsTeamGame)

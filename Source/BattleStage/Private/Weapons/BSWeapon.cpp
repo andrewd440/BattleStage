@@ -266,7 +266,7 @@ void ABSWeapon::SetWeaponState(EWeaponState NewState)
 			WeaponState = NewState;
 			OnNewWeaponState();
 
-			if (!HasAuthority() && Role == ENetRole::ROLE_AutonomousProxy) // Make sure our role is appropriate for the RPC. This may not be the case when initial replication occurs.
+			if (GetNetConnection()) // Make sure we have a net connection. This may not be the case when initial replication occurs.
 			{
 				// Make sure the transition is sent to the server
 				ServerSetWeaponState(NewState);
@@ -555,7 +555,7 @@ void ABSWeapon::OnRep_Owner()
 
 	BSCharacter = Cast<ABSCharacter>(GetOwner());
 
-	if (Role == ENetRole::ROLE_AutonomousProxy)
+	if (GetNetConnection())
 	{
 		// We may have changed weapon state before the owner replicated and NetRole updated.
 		// So make sure the server gets our current state.

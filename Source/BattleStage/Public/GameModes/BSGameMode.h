@@ -36,7 +36,7 @@ public:
 	void HostTerminateGame();
 
 	/** Gets the scoreboard type used for this gamemode */
-	TSubclassOf<class UBSScoreboardWidget> GetScoreboardWidget() const;
+	TSubclassOf<class UBSScoreboardWidget> GetScoreboardWidget() const;	
 
 protected:
 
@@ -53,6 +53,7 @@ public:
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 	virtual void InitGameState() override;
 	virtual TSubclassOf<class AGameSession> GetGameSessionClass() const override;
+	virtual bool ShouldSpawnAtStartSpot(AController* Player) override;
 
 protected:
 	virtual bool ReadyToStartMatch_Implementation() override;
