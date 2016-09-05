@@ -80,6 +80,8 @@ void ABSWeapon::PostInitializeComponents()
 	{
 		ShotType = NewObject<UBSShotType>(this, ShotTypeClass, TEXT("ShotType"));
 	}
+
+	DetachFromOwner(); // Will attach on unequip, stay hidden for now.
 }
 
 void ABSWeapon::SetOwner(AActor* NewOwner)
@@ -87,7 +89,6 @@ void ABSWeapon::SetOwner(AActor* NewOwner)
 	Super::SetOwner(NewOwner);
 
 	BSCharacter = Cast<ABSCharacter>(NewOwner);
-	AttachToOwner();
 }
 
 void ABSWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -102,7 +103,7 @@ void ABSWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 // Called when the game starts or when spawned
 void ABSWeapon::BeginPlay()
 {
-	Super::BeginPlay();	
+	Super::BeginPlay();
 }
 
 // Called every frame
@@ -143,7 +144,7 @@ void ABSWeapon::AttachToOwner()
 	}
 	else
 	{
-		// Only shot MeshTP there is no character owner
+		// Only show MeshTP there is no character owner
 		MeshTP->SetHiddenInGame(false);
 	}
 }
@@ -159,14 +160,15 @@ void ABSWeapon::DetachFromOwner()
 
 void ABSWeapon::Equip()
 {
-	AttachToOwner();
-
 	SetWeaponState(EWeaponState::Equipping);
 }
 
 void ABSWeapon::Unequip()
 {
-	SetWeaponState(EWeaponState::Unequipping);
+	if (WeaponState != EWeaponState::Inactive)
+	{
+		SetWeaponState(EWeaponState::Unequipping);
+	}	
 }
 
 void ABSWeapon::StartFire()
@@ -248,12 +250,12 @@ void ABSWeapon::SetWeaponState(EWeaponState NewState)
 				NewState = EWeaponState::Active;
 			break;
 		case EWeaponState::Inactive:
-			if(WeaponState != EWeaponState::Unequipping)
-				UE_LOG(BattleStage, Warning, TEXT("ABSWeapon setting to inactive before unequipping."));
+			if(WeaponState != EWeaponState::Unequipping && WeaponState != EWeaponState::Inactive)
+				UE_LOG(BattleStage, Warning, TEXT("ABSWeapon set to inactive before unequipping. Seen by: %s"), HasAuthority() ? TEXT("Authority") : TEXT("NoAuthority"));
 			break;
 		case EWeaponState::Equipping:
-			if(WeaponState != EWeaponState::Inactive)
-				UE_LOG(BattleStage, Warning, TEXT("ABSWeapon setting to equipping while not inactive."));
+			if(WeaponState != EWeaponState::Inactive && WeaponState != EWeaponState::Equipping)
+				UE_LOG(BattleStage, Warning, TEXT("ABSWeapon set to equipping while not inactive. Seen by: %s. Was Active? %s"), HasAuthority() ? TEXT("Authority") : TEXT("NoAuthority"), WeaponState == EWeaponState::Active ? TEXT("Yes") : TEXT("No"));
 			break;
 		}
 
@@ -264,7 +266,7 @@ void ABSWeapon::SetWeaponState(EWeaponState NewState)
 			WeaponState = NewState;
 			OnNewWeaponState();
 
-			if (!HasAuthority())
+			if (!HasAuthority() && Role == ENetRole::ROLE_AutonomousProxy) // Make sure our role is appropriate for the RPC. This may not be the case when initial replication occurs.
 			{
 				// Make sure the transition is sent to the server
 				ServerSetWeaponState(NewState);
@@ -330,7 +332,7 @@ void ABSWeapon::OnEquipTransitionStart()
 	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
 	TimerManager.ClearTimer(WeaponStateTimer);
 	
-	if (TransitionTime >= 0.f)
+	if (TransitionTime > 0.f)
 	{
 		TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnEquipTransitionExit, TransitionTime);
 	}
@@ -352,7 +354,7 @@ void ABSWeapon::OnReloadTransitionStart()
 	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
 	TimerManager.ClearTimer(WeaponStateTimer);
 	
-	if (WeaponStats.ReloadSpeed >= 0.f)
+	if (WeaponStats.ReloadSpeed > 0.f)
 	{
 		TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnReloadTransitionExit, WeaponStats.ReloadSpeed);
 	}
@@ -386,7 +388,7 @@ void ABSWeapon::OnUnequipTransitionStart()
 	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
 	TimerManager.ClearTimer(WeaponStateTimer);
 
-	if (TransitionTime >= 0.f)
+	if (TransitionTime > 0.f)
 	{
 		TimerManager.SetTimer(WeaponStateTimer, this, &ABSWeapon::OnUnequipTransitionExit, TransitionTime);
 	}
@@ -523,12 +525,13 @@ void ABSWeapon::OnExitFiringState()
 
 void ABSWeapon::OnEnteredEquippingState()
 {
+	AttachToOwner();
 	PlayEquipSequence();
 }
 
 void ABSWeapon::OnEnteredActiveState()
 {
-	// Do nothing... for now
+	
 }
 
 void ABSWeapon::OnEnteredUnequippingState()
@@ -543,7 +546,7 @@ void ABSWeapon::OnEnteredReloadingState()
 
 void ABSWeapon::OnEnteredInactiveState()
 {
-	// Do nothing... for now
+	DetachFromOwner();
 }
 
 void ABSWeapon::OnRep_Owner()
@@ -551,7 +554,13 @@ void ABSWeapon::OnRep_Owner()
 	Super::OnRep_Owner();
 
 	BSCharacter = Cast<ABSCharacter>(GetOwner());
-	AttachToOwner();
+
+	if (Role == ENetRole::ROLE_AutonomousProxy)
+	{
+		// We may have changed weapon state before the owner replicated and NetRole updated.
+		// So make sure the server gets our current state.
+		ServerSetWeaponState(WeaponState);
+	}
 }
 
 void ABSWeapon::ServerInvokeShot_Implementation(const FShotData& ShotData)

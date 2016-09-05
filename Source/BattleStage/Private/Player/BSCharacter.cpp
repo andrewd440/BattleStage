@@ -56,7 +56,8 @@ void ABSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ABSCharacter, Weapon);
+	DOREPLIFETIME_CONDITION(ABSCharacter, Weapons, COND_InitialOnly);
+	DOREPLIFETIME_CONDITION(ABSCharacter, ActiveWeaponSlot, COND_SkipOwner);
 	DOREPLIFETIME(ABSCharacter, bIsDying);
 	DOREPLIFETIME_CONDITION(ABSCharacter, bIsRunning, COND_SkipOwner);
 	DOREPLIFETIME(ABSCharacter, Health);
@@ -65,8 +66,10 @@ void ABSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 
 float ABSCharacter::GetAimSpread() const
 {
-	if (Weapon)
+	if (auto Weapon = GetEquippedWeapon())
+	{
 		return Weapon->GetCurrentSpread();
+	}		
 
 	return 0.f;
 }
@@ -89,7 +92,7 @@ void ABSCharacter::SetDisableActions(bool bIsDisabled)
 
 	if (bIsDisabled)
 	{
-		if (Weapon)
+		if (auto Weapon = GetEquippedWeapon())
 		{
 			Weapon->StopFire();
 		}
@@ -100,6 +103,7 @@ void ABSCharacter::SetDisableActions(bool bIsDisabled)
 
 void ABSCharacter::StartFire()
 {
+	auto Weapon = GetEquippedWeapon();
 	if (Weapon && !bIsActionsDisabled)
 	{
 		if (bIsRunning)
@@ -113,7 +117,7 @@ void ABSCharacter::StartFire()
 
 void ABSCharacter::StopFire()
 {
-	if (Weapon)
+	if (auto Weapon = GetEquippedWeapon())
 	{
 		Weapon->StopFire();
 	}
@@ -139,7 +143,7 @@ void ABSCharacter::SetRunning(bool bNewRunning)
 		if (bNewRunning)
 		{
 			// No firing while running
-			if (Weapon)
+			if (auto Weapon = GetEquippedWeapon())
 			{
 				Weapon->StopFire();
 			}
@@ -172,6 +176,7 @@ void ABSCharacter::ToggleRunning()
 
 void ABSCharacter::ReloadWeapon()
 {
+	auto Weapon = GetEquippedWeapon();
 	if (!bIsActionsDisabled && Weapon)
 	{
 		Weapon->Reload();
@@ -216,7 +221,7 @@ void ABSCharacter::BeginPlay()
 
 	if (IsLocallyControlled())
 	{
-		EquipWeapon();
+		EquipWeapon(ActiveWeaponSlot);
 	}		
 }
 
@@ -385,6 +390,25 @@ bool ABSCharacter::CanDie() const
 	return Health > 0 && !IsPendingKill();
 }
 
+void ABSCharacter::SwapWeapon()
+{
+	if (ActiveWeaponSlot == EWeaponSlot::Primary)
+	{
+		EquipWeapon(EWeaponSlot::Secondary);
+	}
+	else
+	{
+		EquipWeapon(EWeaponSlot::Primary);
+	}
+}
+
+void ABSCharacter::SetupPlayerInputComponent(class UInputComponent* InInputComponent)
+{
+	Super::SetupPlayerInputComponent(InInputComponent);
+
+	InInputComponent->BindAction("SwapWeapon", IE_Pressed, this, &ABSCharacter::SwapWeapon);
+}
+
 void ABSCharacter::Die(FDamageEvent const& DamageEvent, AController* Killer)
 {
 	bIsDying = true;
@@ -394,9 +418,12 @@ void ABSCharacter::Die(FDamageEvent const& DamageEvent, AController* Killer)
 	ABSGameMode* GameMode = Cast<ABSGameMode>(GetWorld()->GetAuthGameMode());
 	GameMode->ScoreKill(Killer, GetController());
 
-	if (Weapon)
+	for (int32 i = 0; i < (int32)EWeaponSlot::Max; ++i)
 	{
-		Weapon->SetLifeSpan(5.f);
+		if (Weapons[i])
+		{
+			Weapons[i]->SetLifeSpan(5.f);
+		}		
 	}
 
 	// Detach controller, character will be destroyed soon
@@ -415,14 +442,37 @@ void ABSCharacter::OnRep_IsDying()
 	OnDeath();
 }
 
-void ABSCharacter::OnRep_Weapon()
+void ABSCharacter::OnRep_Weapons()
 {
-	if (Weapon)
+	// Can't guarantee that the owner gets replicated with the weapon, so set it here.
+	// (At least as far as I know)
+	for (int32 i = 0; i < (int32)EWeaponSlot::Max; ++i)
 	{
-		// Can't guarantee that the owner gets replicated with the weapon, so set it here.
-		// (At least as far as I know)
-		Weapon->SetOwner(this);
+		if (Weapons[i])
+		{
+			Weapons[i]->SetOwner(this);
+		}		
 	}
+
+	if (IsLocallyControlled())
+	{
+		EquipWeapon(ActiveWeaponSlot);
+	}
+
+	if (auto Weapon = GetEquippedWeapon())
+	{
+		Weapon->AttachToOwner(); // Need to make sure we are properly attach regardless of ownership.
+	}
+}
+
+void ABSCharacter::OnRep_WeaponSlot()
+{
+	
+}
+
+void ABSCharacter::OnRep_Owner()
+{
+	Super::OnRep_Owner();
 }
 
 void ABSCharacter::UpdateViewTarget(const float DeltaSeconds)
@@ -498,12 +548,15 @@ void ABSCharacter::SetReceiveHitInfo(const float Damage, const FDamageEvent& Dam
 
 void ABSCharacter::CreateDefaultLoadout()
 {
-	if (DefaultWeaponClass)
+	for (int32 i = 0; i < (int32)EWeaponSlot::Max; ++i)
 	{
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.Instigator = this;
-		SpawnParams.Owner = this;
-		Weapon = GetWorld()->SpawnActor<ABSWeapon>(DefaultWeaponClass, SpawnParams);
+		if (auto WeaponClass = DefaultWeapons[i])
+		{
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.Instigator = this;
+			SpawnParams.Owner = this;
+			Weapons[i] = GetWorld()->SpawnActor<ABSWeapon>(WeaponClass, SpawnParams);
+		}
 	}
 }
 
@@ -589,7 +642,7 @@ void ABSCharacter::PossessedBy(AController* NewController)
 
 	SetOwner(NewController);
 
-	if (Weapon)
+	if (auto Weapon = GetEquippedWeapon())
 	{
 		Weapon->AttachToOwner();
 	}
@@ -604,20 +657,32 @@ void ABSCharacter::UnPossessed()
 	UpdateMeshVisibility();
 }
 
-void ABSCharacter::EquipWeapon()
+void ABSCharacter::EquipWeapon(const EWeaponSlot InWeaponSlot)
 {
-	if (Weapon)
+	if (auto CurrentWeapon = GetEquippedWeapon())
 	{
-		Weapon->Equip();
+		CurrentWeapon->Unequip();
+	}
+	
+	ActiveWeaponSlot = InWeaponSlot;
+
+	if (auto NewWeapon = Weapons[(int32)InWeaponSlot])
+	{
+		NewWeapon->Equip();
+	}
+
+	if (!HasAuthority())
+	{
+		ServerEquipWeapon(InWeaponSlot);
 	}
 }
 
-//void ABSCharacter::ServerEquipWeapon_Implementation()
-//{
-//	EquipWeapon();
-//}
-//
-//bool ABSCharacter::ServerEquipWeapon_Validate()
-//{
-//	return true;
-//}
+void ABSCharacter::ServerEquipWeapon_Implementation(const EWeaponSlot InWeaponSlot)
+{
+	EquipWeapon(InWeaponSlot);
+}
+
+bool ABSCharacter::ServerEquipWeapon_Validate(const EWeaponSlot InWeaponSlot)
+{
+	return InWeaponSlot == EWeaponSlot::Primary || InWeaponSlot == EWeaponSlot::Secondary;
+}

@@ -14,7 +14,7 @@ class USoundBase;
 class UAnimMontage;
 
 UENUM()
-enum class EWeaponState
+enum class EWeaponState : uint8
 {
 	Inactive,		// Is not equipped
 	Equipping,		// In equipping transition
@@ -394,7 +394,7 @@ protected:
 	// to respond to state changes on the client side. This should be set
 	// to WeaponState on OnRep_WeaponState exit.
 	UPROPERTY(BlueprintReadOnly, Category = WeaponData)
-	TEnumAsByte<EWeaponState> PrevWeaponState = EWeaponState::Inactive;
+	EWeaponState PrevWeaponState = EWeaponState::Inactive;
 
 	// Common weapon firing data
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = WeaponData)
@@ -433,7 +433,7 @@ private:
 private:
 	// Current state of the weapon
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_WeaponState, Category = WeaponData, meta = (AllowPrivateAccess = "true"))
-	TEnumAsByte<EWeaponState> WeaponState = EWeaponState::Inactive;
+	EWeaponState WeaponState = EWeaponState::Inactive;
 
 	// Current ammo count
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = WeaponData, meta = (AllowPrivateAccess = "true"))

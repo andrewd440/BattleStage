@@ -46,6 +46,14 @@ private:
 	uint8 ForceReplicateByte;
 };
 
+UENUM()
+enum class EWeaponSlot : uint8
+{
+	Primary,
+	Secondary,
+	Max
+};
+
 UCLASS(config=Game)
 class ABSCharacter : public ACharacter
 {
@@ -103,7 +111,10 @@ public:
 	bool CanDie() const;
 
 	UFUNCTION(BlueprintCallable, Category = Health)
-	int32 GetHealth() const;			
+	int32 GetHealth() const;				
+
+	UFUNCTION(BlueprintCallable, Category = Inventory)
+	void SwapWeapon();
 
 protected:
 	/**
@@ -123,8 +134,14 @@ protected:
 
 	void EnableRagdollPhysics();	
 
+	void EquipWeapon(const EWeaponSlot WeaponSlot);
+
+	UFUNCTION()
+	virtual void OnRep_WeaponSlot();
+
 	/** ACharacter Interface Begin */
 public:	
+	virtual void SetupPlayerInputComponent(class UInputComponent* InInputComponent) override;
 	virtual void PostInitializeComponents() override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void UnPossessed() override;
@@ -159,14 +176,14 @@ public:
 	virtual float PlayAnimMontage(class UAnimMontage* AnimMontage, float InPlayRate = 1.f, FName StartSectionName = NAME_None) override;
 
 	virtual void StopAnimMontage(class UAnimMontage* AnimMontage = NULL) override;
+
+protected:
+	virtual void OnRep_Owner() override;
 	/** AActor Interface End */
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Weapon)
-	TSubclassOf<ABSWeapon> DefaultWeaponClass = nullptr;
-
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_Weapon, Category = Weapon)
-	ABSWeapon* Weapon = nullptr;
+	UPROPERTY(EditDefaultsOnly, Category = Weapon)
+	TSubclassOf<ABSWeapon> DefaultWeapons[EWeaponSlot::Max];
 
 	// Socket name to attach equipped weapons
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
@@ -203,7 +220,8 @@ protected:
 	FName RadialDamageImpactBone;
 
 private:
-	void EquipWeapon();
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerEquipWeapon(const EWeaponSlot WeaponSlot);
 
 	void OnDeathAnimEnded(UAnimMontage* Montage, bool bInterupted);
 
@@ -226,7 +244,7 @@ private:
 	void OnRep_IsDying();
 
 	UFUNCTION()
-	void OnRep_Weapon();
+	void OnRep_Weapons();
 
 	void SetReceiveHitInfo(const float Damage, FDamageEvent const& DamageEvent, AActor* Instigator);
 
@@ -248,7 +266,14 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
 	class USkeletalMeshComponent* FirstPersonMesh;
 
-	float LastEyeHeight;
+	UPROPERTY(ReplicatedUsing = OnRep_Weapons)
+	ABSWeapon* Weapons[EWeaponSlot::Max];
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_WeaponSlot, Category = Weapon, meta = (AllowPrivateAccess = "true"))
+	EWeaponSlot ActiveWeaponSlot = EWeaponSlot::Primary;
+
+	// Eye height from last update. Used to lerp between standing and crouched camera position.
+	float LastEyeHeight; 
 
 	bool bIsActionsDisabled = false;
 
@@ -267,9 +292,11 @@ public:
 	/** Gets the name of the socket to attach equipped weapons. */
 	FORCEINLINE FName GetWeaponEquippedSocket() const { return WeaponEquippedSocket; }
 
+	FORCEINLINE EWeaponSlot GetActiveWeaponSlot() const { return ActiveWeaponSlot; }
+
 	/** Gets the currently equipped weapon. Null if no weapon is equipped. */
 	UFUNCTION(BlueprintCallable, Category = Mesh)
-	FORCEINLINE ABSWeapon* GetEquippedWeapon() const { return Weapon; }
+	FORCEINLINE ABSWeapon* GetEquippedWeapon() const { return Weapons[(int32)ActiveWeaponSlot]; }
 };
 
 FORCEINLINE int32 ABSCharacter::GetHealth() const
