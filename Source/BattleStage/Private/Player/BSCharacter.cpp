@@ -222,7 +222,7 @@ void ABSCharacter::BeginPlay()
 	if (IsLocallyControlled())
 	{
 		EquipWeapon(ActiveWeaponSlot);
-	}		
+	}			
 }
 
 float ABSCharacter::PlayAnimMontage(class UAnimMontage* AnimMontage, float InPlayRate /*= 1.f*/, FName StartSectionName /*= NAME_None*/)

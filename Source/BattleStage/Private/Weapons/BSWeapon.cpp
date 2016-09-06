@@ -222,8 +222,10 @@ void ABSWeapon::PlayFiringSequence()
 		BSCharacter->IsFirstPerson() &&
 		BSCharacter->IsLocallyControlled())
 	{
-		APlayerController* const PlayerController = static_cast<APlayerController* const>(BSCharacter->GetController());
-		PlayerController->ClientPlayCameraShake(FireCameraShake);
+		if (APlayerController* const PlayerController = Cast<APlayerController>(BSCharacter->GetController()))
+		{
+			PlayerController->ClientPlayCameraShake(FireCameraShake);
+		}		
 	}
 }
 

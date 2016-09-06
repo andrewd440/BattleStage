@@ -18,6 +18,7 @@ public class BattleStage : ModuleRules
                 "BattleStage/Private/Online",
                 "BattleStage/Private/Player",
                 "BattleStage/Private/Weapons",
+                "BattleStage/Private/Sound",
             });
 
         PublicDependencyModuleNames.AddRange(
