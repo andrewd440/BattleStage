@@ -499,10 +499,6 @@ void ABSCharacter::TakeHit(const float Damage, FDamageEvent const& DamageEvent, 
 	if(GetNetMode() != NM_DedicatedServer)
 		OnReceiveHit();
 
-	FHitResult HitInfo;
-	FVector ImpulseDir;
-	DamageEvent.GetBestHitInfo(this, EventInstigator ? EventInstigator->GetPawn() : nullptr, HitInfo, ImpulseDir);
-
 	ApplyDamageMomentum(Damage, DamageEvent, EventInstigator ? EventInstigator->GetPawn() : nullptr, DamageCauser);
 
 	if (DamageCauser)
