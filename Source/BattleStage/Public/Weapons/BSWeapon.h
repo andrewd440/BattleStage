@@ -175,10 +175,11 @@ public:
 	float GetCurrentSpread() const;
 
 	/** AActor interface */
+	virtual void BeginDestroy() override;
 	virtual void PostInitProperties() override;
 	virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
 	virtual void PostInitializeComponents() override;
-	virtual void SetOwner(AActor* NewOwner) override;
+	virtual void SetOwner(AActor* NewOwner) override;	
 	/** AActor interface end */
 
 protected:

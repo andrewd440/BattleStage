@@ -24,13 +24,20 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	/** AActor Interface End */
 
-protected:
 	/**
 	* Detonates the projectile at it's current position and applies radial damage.
 	* This object will be destroyed after detonation.
 	*/
 	UFUNCTION(BlueprintCallable, Category = Projectile)
-	virtual void Detonate();
+	void Detonate();
+
+protected:
+	/**
+	* Detonates the projectile at a specified position and applies radial damage.
+	* This object will be destroyed after detonation.
+	*/
+	UFUNCTION(BlueprintCallable, Category = Projectile)
+	virtual void DetonateAtLocation(const FVector& Location, const FRotator& Rotation);
 
 	/** Called after the projectile has been detonated and is about to be destroyed. */
 	UFUNCTION(BlueprintNativeEvent, Category = Projectile)
@@ -54,7 +61,7 @@ protected:
 
 private:
 	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerDetonate();
+	void ServerDetonate(const FVector& Location, const FRotator& Rotation);
 
 	UFUNCTION()
 	void OnRep_IsDetonated();

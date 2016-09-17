@@ -91,6 +91,11 @@ void ABSWeapon::SetOwner(AActor* NewOwner)
 	BSCharacter = Cast<ABSCharacter>(NewOwner);
 }
 
+void ABSWeapon::BeginDestroy()
+{
+	Super::BeginDestroy();
+}
+
 void ABSWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);

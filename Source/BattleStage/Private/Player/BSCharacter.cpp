@@ -418,16 +418,16 @@ void ABSCharacter::Die(FDamageEvent const& DamageEvent, AController* Killer)
 	ABSGameMode* GameMode = Cast<ABSGameMode>(GetWorld()->GetAuthGameMode());
 	GameMode->ScoreKill(Killer, GetController());
 
+	// Detach controller, character will be destroyed soon
+	DetachFromControllerPendingDestroy();
+
 	for (int32 i = 0; i < (int32)EWeaponSlot::Max; ++i)
 	{
 		if (Weapons[i])
 		{
 			Weapons[i]->SetLifeSpan(5.f);
-		}		
+		}
 	}
-
-	// Detach controller, character will be destroyed soon
-	DetachFromControllerPendingDestroy();
 
 	if (GetNetMode() != NM_DedicatedServer)
 	{
@@ -498,6 +498,12 @@ void ABSCharacter::TakeHit(const float Damage, FDamageEvent const& DamageEvent, 
 	
 	if(GetNetMode() != NM_DedicatedServer)
 		OnReceiveHit();
+
+	FHitResult HitInfo;
+	FVector ImpulseDir;
+	DamageEvent.GetBestHitInfo(this, EventInstigator ? EventInstigator->GetPawn() : nullptr, HitInfo, ImpulseDir);
+
+	ApplyDamageMomentum(Damage, DamageEvent, EventInstigator ? EventInstigator->GetPawn() : nullptr, DamageCauser);
 
 	if (DamageCauser)
 	{
@@ -576,28 +582,23 @@ void ABSCharacter::OnDeath_Implementation()
 
 	SetActorEnableCollision(true);
 
-	static FName NoCollisionProfile{ TEXT("NoCollision") };
-	GetCapsuleComponent()->SetCollisionProfileName(NoCollisionProfile);
-
 	// Play optional death anim and then active ragdoll
 	if (DeathAnim)
 	{
 		const float DeathAnimLength = PlayAnimMontage(DeathAnim);
 		
-		// Activate ragdoll after death anim
-		FOnMontageBlendingOutStarted RagdollStart;
-		RagdollStart.BindUObject(this, &ABSCharacter::OnDeathAnimEnded);
-		GetMesh()->GetAnimInstance()->Montage_SetBlendingOutDelegate(RagdollStart);
+		// Activate ragdoll after death anim starts. Give it a small amount of time to get into the death anim pose.
+		FTimerHandle RagdollTimer;
+		GetWorldTimerManager().SetTimer(RagdollTimer, this, &ABSCharacter::EnableRagdollPhysics, FMath::Min(.2f, DeathAnimLength));
 	}
 	else
 	{
 		EnableRagdollPhysics();
 	}	
-}
 
-void ABSCharacter::OnDeathAnimEnded(UAnimMontage*, bool)
-{
-	EnableRagdollPhysics();
+	// Disable capsule
+	static FName NoCollisionProfile{ TEXT("NoCollision") };
+	GetCapsuleComponent()->SetCollisionProfileName(NoCollisionProfile);
 }
 
 void ABSCharacter::EnableRagdollPhysics()

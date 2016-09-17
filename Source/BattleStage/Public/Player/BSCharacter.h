@@ -198,7 +198,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Character)
 	float CrouchCameraSpeed;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Health, Replicated)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Health, Replicated)
 	int32 Health;
 
 	UPROPERTY(ReplicatedUsing = OnRep_IsDying)
@@ -222,8 +222,6 @@ protected:
 private:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerEquipWeapon(const EWeaponSlot WeaponSlot);
-
-	void OnDeathAnimEnded(UAnimMontage* Montage, bool bInterupted);
 
 	/**
 	* Server only.

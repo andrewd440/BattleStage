@@ -59,13 +59,13 @@ void ABSProjectile::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(ABSProjectile, bIsDetonated);
 }
 
-void ABSProjectile::Detonate()
+void ABSProjectile::DetonateAtLocation(const FVector& Location, const FRotator& Rotation)
 {
 	if (!bIsDetonated)
 	{
 		if (!HasAuthority())
 		{
-			ServerDetonate();
+			ServerDetonate(Location, Rotation);
 		}
 		else
 		{
@@ -75,7 +75,7 @@ void ABSProjectile::Detonate()
 			bool bDamagedActor = UGameplayStatics::ApplyRadialDamageWithFalloff(this,
 				Damage.BaseDamage,
 				Damage.MinimumDamage,
-				GetActorLocation(),
+				Location,
 				Damage.InnerRadius,
 				Damage.OuterRadius,
 				Damage.DamageFalloff,
@@ -91,6 +91,11 @@ void ABSProjectile::Detonate()
 			TearOff();
 		}
 	}
+}
+
+void ABSProjectile::Detonate()
+{
+	DetonateAtLocation(GetActorLocation(), GetActorRotation());
 }
 
 void ABSProjectile::OnImpact(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
@@ -117,12 +122,12 @@ void ABSProjectile::Deactivate()
 	bIsDetonated = true;
 }
 
-void ABSProjectile::ServerDetonate_Implementation()
+void ABSProjectile::ServerDetonate_Implementation(const FVector& Location, const FRotator& Rotation)
 {
-	Detonate();
+	DetonateAtLocation(Location, Rotation);
 }
 
-bool ABSProjectile::ServerDetonate_Validate()
+bool ABSProjectile::ServerDetonate_Validate(const FVector&, const FRotator&)
 {
 	return true;
 }
@@ -166,6 +171,7 @@ void ABSImpactGrenade::OnImpact(UPrimitiveComponent* HitComponent, AActor* Other
 {
 	if (HasAuthority() && Cast<ABSCharacter>(OtherActor))
 	{
-		Detonate();
+		const FVector NudgedLocation = Hit.ImpactPoint + Hit.ImpactNormal * 10.f; // Make sure we don't detonate inside a surface
+		DetonateAtLocation(NudgedLocation, GetActorRotation());
 	}
 }
