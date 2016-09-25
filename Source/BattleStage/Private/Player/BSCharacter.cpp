@@ -425,14 +425,11 @@ void ABSCharacter::Die(FDamageEvent const& DamageEvent, AController* Killer)
 	{
 		if (Weapons[i])
 		{
-			Weapons[i]->SetLifeSpan(5.f);
+			Weapons[i]->TearOff();			
 		}
 	}
 
-	if (GetNetMode() != NM_DedicatedServer)
-	{
-		OnRep_IsDying();
-	}
+	OnRep_IsDying();
 }
 
 void ABSCharacter::OnRep_IsDying()
@@ -569,6 +566,15 @@ void ABSCharacter::OnReceiveHit_Implementation()
 
 void ABSCharacter::OnDeath_Implementation()
 {
+	for (int32 i = 0; i < (int32)EWeaponSlot::Max; ++i)
+	{
+		if (Weapons[i])
+		{
+			Weapons[i]->StopFire();
+			Weapons[i]->SetLifeSpan(5.f);
+		}
+	}
+
 	// Stop any existing montages
 	StopAnimMontage();
 

@@ -270,6 +270,7 @@ void ABSWeapon::SetWeaponState(EWeaponState NewState)
 		if (WeaponState != NewState)
 		{
 			// Set state locally
+			PrevWeaponState = WeaponState;
 			WeaponState = NewState;
 			OnNewWeaponState();
 
@@ -507,7 +508,7 @@ void ABSWeapon::OnEnteredFiringState()
 
 void ABSWeapon::OnExitFiringState()
 {
-	if (BSCharacter->IsLocallyControlled())
+	if (WeaponFiringTimer.IsValid())
 	{
 		GetWorldTimerManager().ClearTimer(WeaponFiringTimer);
 	}
