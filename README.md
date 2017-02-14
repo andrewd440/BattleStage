@@ -1,2 +1,2 @@
 # BattleStage
-A dynamic cover based FPS built with UE4
+A prototype multiplayer FPS built with UE4 used to learn the engine and the networking systems. 
